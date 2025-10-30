@@ -10,8 +10,8 @@ plugins {
 
 kotlin {
     // REQUIRED for exposed-crypt tests, but makes Oracle tests fail...
-//    jvmToolchain(17)
-    jvmToolchain(11)
+//    jvmToolchain(21)
+    jvmToolchain(21)
 
     compilerOptions {
         optIn.add("kotlin.time.ExperimentalTime")
