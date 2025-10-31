@@ -25,8 +25,3 @@ dependencies {
     testImplementation(libs.logcaptor)
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}

@@ -1,11 +1,14 @@
 @file:OptIn(ExperimentalWasmDsl::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import dev.whyoleg.sweetspi.gradle.*
 
 plugins {
     kotlin("multiplatform")
     alias(libs.plugins.dokka)
     alias(libs.plugins.kotlinx.atomicfu)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.whyoleg.sweetspi)
 }
 
 repositories {
@@ -22,6 +25,7 @@ kotlin {
     }
     applyDefaultHierarchyTemplate()
 
+    withSweetSpi()
     jvm()
 //    iosArm64()
 //    iosX64()

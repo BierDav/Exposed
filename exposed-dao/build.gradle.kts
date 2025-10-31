@@ -1,6 +1,10 @@
+import dev.whyoleg.sweetspi.gradle.*
+
 plugins {
     kotlin("jvm")
     alias(libs.plugins.dokka)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.whyoleg.sweetspi)
 }
 
 repositories {
@@ -9,6 +13,8 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+
+    withSweetSpi()
 }
 
 dependencies {

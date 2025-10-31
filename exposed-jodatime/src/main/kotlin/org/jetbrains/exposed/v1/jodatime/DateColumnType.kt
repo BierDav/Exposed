@@ -5,6 +5,7 @@ import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDate
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.datetime.LocalDateColumnType
 import org.jetbrains.exposed.v1.core.datetime.LocalDateTimeColumnType
@@ -40,6 +41,10 @@ class JodaLocalDateColumnType : LocalDateColumnType<DateTime>() {
         is DateTime -> value
         else -> super.valueFromDB(value)
     }
+
+    override fun clone(): IColumnType<DateTime> {
+        TODO("Not yet implemented")
+    }
 }
 
 /**
@@ -63,6 +68,8 @@ class JodaLocalDateTimeColumnType : LocalDateTimeColumnType<DateTime>() {
         is DateTime -> value
         else -> super.valueFromDB(value)
     }
+
+    override fun clone(): IColumnType<DateTime> = JodaLocalDateTimeColumnType()
 }
 
 /**
@@ -87,6 +94,8 @@ class JodaLocalTimeColumnType : LocalTimeColumnType<LocalTime>() {
         value.second,
         (value.nanosecond / 1_000_000) % 1000
     )
+
+    override fun clone(): IColumnType<LocalTime> = JodaLocalTimeColumnType()
 }
 
 /**
@@ -124,6 +133,8 @@ class DateTimeWithTimeZoneColumnType : OffsetDateTimeColumnType<DateTime>() {
         is DateTime -> value
         else -> super.valueFromDB(value)
     }
+
+    override fun clone(): IColumnType<DateTime> = DateTimeWithTimeZoneColumnType()
 }
 
 /**

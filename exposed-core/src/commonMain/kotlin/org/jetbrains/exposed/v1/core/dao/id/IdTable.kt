@@ -1,28 +1,27 @@
 package org.jetbrains.exposed.v1.core.dao.id
 
+import dev.whyoleg.sweetspi.Service
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.wrap
+import java.util.ServiceLoader
 import kotlin.uuid.Uuid
 
 /** Base class representing a producer of [EntityID] instances.  */
+@Service
 interface EntityIDFactory {
     /** Returns a new [EntityID] that holds a [value] of type [T], for the specified [table]. */
-    fun <T : Any> createEntityID(value: T, table: IdTable<T>): EntityID<T>
+    fun <T : Any> createEntityID(value: T, table: IdTable<T>): EntityID<T> = EntityID(value, table)
 }
 
 /** Class responsible for locating and providing the appropriate functions to produce [EntityID] instances. */
 object EntityIDFunctionProvider {
-    private val factory: EntityIDFactory
-    init {
-        factory = ServiceLoader.load(EntityIDFactory::class.java, EntityIDFactory::class.java.classLoader).firstOrNull()
-            ?: object : EntityIDFactory {
-                override fun <T : Any> createEntityID(value: T, table: IdTable<T>): EntityID<T> {
-                    return EntityID(value, table)
-                }
-            }
-    }
+    private val factory: EntityIDFactory =
+        ServiceLoader.load(EntityIDFactory::class.java, EntityIDFactory::class.java.classLoader).firstOrNull() ?: object : EntityIDFactory {}
 
-    /** Returns a new [EntityID] that holds a [value] of type [T], for the specified [table]. */
+
+    /**
+     * Returns a new [EntityID] that holds a [value] of type [T], for the specified [table].
+     */
     fun <T : Any> createEntityID(value: T, table: IdTable<T>) = factory.createEntityID(value, table)
 }
 
@@ -55,7 +54,9 @@ abstract class IdTable<T : Any>(name: String = "") : Table(name) {
         _idColumns.add(newColumn)
     }
 
-    internal fun <S : Any> addIdColumnInternal(newColumn: Column<EntityID<S>>) { addIdColumn(newColumn) }
+    internal fun <S : Any> addIdColumnInternal(newColumn: Column<EntityID<S>>) {
+        addIdColumn(newColumn)
+    }
 }
 
 /**
@@ -137,6 +138,7 @@ open class CompositeIdTable(name: String = "") : IdTable<CompositeID>(name) {
             object : ColumnType<CompositeID>() {
                 override fun sqlType(): String = ""
                 override fun valueFromDB(value: Any): CompositeID? = null
+                override fun clone(): IColumnType<CompositeID> = this
             }
         )
         return Column(this, "composite_id", EntityIDColumnType(placeholder)).apply {

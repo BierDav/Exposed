@@ -8,7 +8,6 @@ import org.jetbrains.exposed.v1.core.DatabaseApi
 import org.jetbrains.exposed.v1.core.InternalApi
 import org.jetbrains.exposed.v1.core.Transaction
 import kotlin.collections.set
-import kotlin.native.concurrent.ThreadLocal
 
 /**
  * Represents the object responsible for storing internal data related to each registered database
@@ -19,7 +18,7 @@ import kotlin.native.concurrent.ThreadLocal
 object CoreTransactionManager {
     private val databases = ConcurrentMutableList<DatabaseApi>()
 
-    private var currentDefaultDatabase = atomic<DatabaseApi?>(null)
+    private val currentDefaultDatabase = atomic<DatabaseApi?>(null)
 
     /** Returns the database that has been set as the default for all transactions. */
     fun getDefaultDatabase(): DatabaseApi? = currentDefaultDatabase.value

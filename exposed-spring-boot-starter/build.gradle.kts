@@ -1,7 +1,5 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
@@ -32,11 +30,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
-}
+
 
 tasks.withType<Test>().configureEach {
     if (JavaVersion.VERSION_1_8 > JavaVersion.current()) {

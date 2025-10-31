@@ -1,6 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm")
 
@@ -29,8 +26,3 @@ dependencies {
     compileOnly(libs.r2dbc.postgresql)
 }
 
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_11)
-    }
-}

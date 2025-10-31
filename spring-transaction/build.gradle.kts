@@ -1,6 +1,4 @@
 import org.gradle.api.tasks.testing.logging.*
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.*
 
 plugins {
     kotlin("jvm")
@@ -34,12 +32,6 @@ dependencies {
     testImplementation(libs.log4j.core)
     testImplementation(libs.junit)
     testImplementation(libs.h2)
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
-    }
 }
 
 tasks.withType<Test>().configureEach {

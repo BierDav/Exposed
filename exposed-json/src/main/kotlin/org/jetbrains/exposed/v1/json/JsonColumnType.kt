@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ColumnType
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.JsonColumnMarker
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.statements.api.PreparedStatementApi
@@ -45,6 +46,8 @@ open class JsonColumnType<T : Any>(
     } else {
         super.parameterMarker(value)
     }
+
+    override fun clone(): IColumnType<T> = JsonColumnType(serialize, deserialize)
 
     override fun notNullValueToDB(value: T): Any = serialize(value)
 

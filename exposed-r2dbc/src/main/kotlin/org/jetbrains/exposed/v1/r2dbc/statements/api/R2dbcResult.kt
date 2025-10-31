@@ -20,6 +20,7 @@ import org.reactivestreams.Publisher
 import java.sql.Timestamp
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
+import kotlin.reflect.KClass
 import kotlin.time.Instant
 
 /**
@@ -122,28 +123,28 @@ class R2dbcRow(val row: Row, private val typeMapping: R2dbcTypeMapping) : RowApi
     }
 
     @Suppress("unchecked_cast")
-    override fun <T> getObject(index: Int, type: Class<T>): T? {
+    override fun <T : Any> getObject(index: Int, type: KClass<T>): T? {
         if (type == Instant::class.java) {
             @Suppress("UNCHECKED_CAST")
             row.get(index - 1, Timestamp::class.java)?.toInstant() as T?
         }
-        return row.get(index - 1, type) as T
+        return row.get(index - 1, type.java) as T
     }
 
-    override fun <T> getObject(name: String, type: Class<T>): T? {
+    override fun <T : Any> getObject(name: String, type: KClass<T>): T? {
         if (type == Instant::class.java) {
             @Suppress("UNCHECKED_CAST")
             return row.get(name, Timestamp::class.java)?.toInstant() as T?
         }
-        return row.get(name, type)
+        return row.get(name, type.java)
     }
 
-    override fun <T> getObject(index: Int, type: Class<T>?, columnType: IColumnType<*>): T? {
+    override fun <T : Any> getObject(index: Int, type: KClass<T>?, columnType: IColumnType<*>): T? {
         if (type == Instant::class.java) {
             @Suppress("UNCHECKED_CAST")
             return typeMapping.getValue(row, Timestamp::class.java, index, currentDialect, columnType)?.toInstant() as T?
         }
-        return typeMapping.getValue(row, type, index, currentDialect, columnType)
+        return typeMapping.getValue(row, type?.java, index, currentDialect, columnType)
     }
 
     override fun getString(index: Int): String? = row.get(index - 1, java.lang.String::class.java)?.toString()

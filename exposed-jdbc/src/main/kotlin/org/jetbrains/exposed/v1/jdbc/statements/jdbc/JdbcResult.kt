@@ -4,9 +4,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.jetbrains.exposed.v1.core.statements.api.ResultApi
 import org.jetbrains.exposed.v1.core.statements.api.RowApi
-import org.jetbrains.exposed.v1.core.vendors.currentDialect
 import java.sql.ResultSet
 import java.sql.Timestamp
+import kotlin.reflect.KClass
 import kotlin.time.Instant
 
 /**
@@ -40,12 +40,12 @@ class JdbcResult(
         return result
     }
 
-    override fun <T> getObject(index: Int, type: Class<T>): T? {
-        if (type == Instant::class.java){
+    override fun <T : Any> getObject(index: Int, type: KClass<T>): T? {
+        if (type == Instant::class.java) {
             @Suppress("UNCHECKED_CAST")
             return result.getObject(index, Timestamp::class.java)?.toInstant() as T?
         }
-        return result.getObject(index, type)
+        return result.getObject(index, type.java)
     }
 
     override fun getObject(name: String): Any? {
@@ -56,12 +56,12 @@ class JdbcResult(
         return result
     }
 
-    override fun <T> getObject(name: String, type: Class<T>): T? {
-        if (type == Instant::class.java){
+    override fun <T : Any> getObject(name: String, type: KClass<T>): T? {
+        if (type == Instant::class.java) {
             @Suppress("UNCHECKED_CAST")
             return result.getObject(name, Timestamp::class.java)?.toInstant() as T?
         }
-        return result.getObject(name, type)
+        return result.getObject(name, type.java)
     }
 
     override fun getString(index: Int): String? = result.getString(index)

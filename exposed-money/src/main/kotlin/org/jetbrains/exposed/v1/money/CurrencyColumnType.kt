@@ -2,6 +2,7 @@ package org.jetbrains.exposed.v1.money
 
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.ColumnType
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
@@ -26,6 +27,8 @@ class CurrencyColumnType : ColumnType<CurrencyUnit>() {
             }
         }
     }
+
+    override fun clone(): IColumnType<CurrencyUnit> = CurrencyColumnType()
 
     override fun valueFromDB(value: Any): CurrencyUnit {
         return when (value) {

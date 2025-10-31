@@ -137,6 +137,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinDateFunctionsKt {
 public final class org/jetbrains/exposed/v1/datetime/KotlinDurationColumnType : org/jetbrains/exposed/v1/core/datetime/DurationColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinDurationColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromDuration-LRDsOJo (J)Ljava/lang/Object;
 	public fun fromDuration-wmV0flA (J)J
 	public synthetic fun toDuration-5sfh64U (Ljava/lang/Object;)J
@@ -149,6 +150,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinDurationColumnType$Co
 public final class org/jetbrains/exposed/v1/datetime/KotlinInstantColumnType : org/jetbrains/exposed/v1/core/datetime/InstantColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinInstantColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromInstant (Lkotlin/time/Instant;)Ljava/lang/Object;
 	public fun fromInstant (Lkotlin/time/Instant;)Lkotlin/time/Instant;
 	public synthetic fun toInstant (Ljava/lang/Object;)Lkotlin/time/Instant;
@@ -161,6 +163,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinInstantColumnType$Com
 public final class org/jetbrains/exposed/v1/datetime/KotlinLocalDateColumnType : org/jetbrains/exposed/v1/core/datetime/LocalDateColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinLocalDateColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromLocalDate (Lkotlinx/datetime/LocalDate;)Ljava/lang/Object;
 	public fun fromLocalDate (Lkotlinx/datetime/LocalDate;)Lkotlinx/datetime/LocalDate;
 	public synthetic fun toLocalDate (Ljava/lang/Object;)Lkotlinx/datetime/LocalDate;
@@ -173,6 +176,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinLocalDateColumnType$C
 public final class org/jetbrains/exposed/v1/datetime/KotlinLocalDateTimeColumnType : org/jetbrains/exposed/v1/core/datetime/LocalDateTimeColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinLocalDateTimeColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromLocalDateTime (Lkotlinx/datetime/LocalDateTime;)Ljava/lang/Object;
 	public fun fromLocalDateTime (Lkotlinx/datetime/LocalDateTime;)Lkotlinx/datetime/LocalDateTime;
 	public synthetic fun toLocalDateTime (Ljava/lang/Object;)Lkotlinx/datetime/LocalDateTime;
@@ -187,6 +191,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinLocalDateTimeColumnTy
 public final class org/jetbrains/exposed/v1/datetime/KotlinLocalTimeColumnType : org/jetbrains/exposed/v1/core/datetime/LocalTimeColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinLocalTimeColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromLocalTime (Lkotlinx/datetime/LocalTime;)Ljava/lang/Object;
 	public fun fromLocalTime (Lkotlinx/datetime/LocalTime;)Lkotlinx/datetime/LocalTime;
 	public synthetic fun toLocalTime (Ljava/lang/Object;)Lkotlinx/datetime/LocalTime;
@@ -201,6 +206,7 @@ public final class org/jetbrains/exposed/v1/datetime/KotlinLocalTimeColumnType$C
 public final class org/jetbrains/exposed/v1/datetime/KotlinOffsetDateTimeColumnType : org/jetbrains/exposed/v1/core/datetime/OffsetDateTimeColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/KotlinOffsetDateTimeColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromOffsetDateTime (Ljava/time/OffsetDateTime;)Ljava/lang/Object;
 	public fun fromOffsetDateTime (Ljava/time/OffsetDateTime;)Ljava/time/OffsetDateTime;
 	public synthetic fun toOffsetDateTime (Ljava/lang/Object;)Ljava/time/OffsetDateTime;
@@ -217,6 +223,7 @@ public final class org/jetbrains/exposed/v1/datetime/XCurrentTimestamp : org/jet
 public final class org/jetbrains/exposed/v1/datetime/XKotlinInstantColumnType : org/jetbrains/exposed/v1/core/datetime/InstantColumnType {
 	public static final field Companion Lorg/jetbrains/exposed/v1/datetime/XKotlinInstantColumnType$Companion;
 	public fun <init> ()V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public synthetic fun fromInstant (Lkotlin/time/Instant;)Ljava/lang/Object;
 	public fun fromInstant (Lkotlin/time/Instant;)Lkotlinx/datetime/Instant;
 	public synthetic fun toInstant (Ljava/lang/Object;)Lkotlin/time/Instant;

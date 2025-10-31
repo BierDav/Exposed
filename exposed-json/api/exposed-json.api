@@ -27,6 +27,7 @@ public final class org/jetbrains/exposed/v1/json/Extract : org/jetbrains/exposed
 
 public final class org/jetbrains/exposed/v1/json/JsonBColumnType : org/jetbrains/exposed/v1/json/JsonColumnType {
 	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public fun getUsesBinaryFormat ()Z
 	public fun sqlType ()Ljava/lang/String;
 }
@@ -37,6 +38,7 @@ public final class org/jetbrains/exposed/v1/json/JsonBColumnTypeKt {
 
 public class org/jetbrains/exposed/v1/json/JsonColumnType : org/jetbrains/exposed/v1/core/ColumnType, org/jetbrains/exposed/v1/core/JsonColumnMarker {
 	public fun <init> (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+	public fun clone ()Lorg/jetbrains/exposed/v1/core/IColumnType;
 	public final fun getDeserialize ()Lkotlin/jvm/functions/Function1;
 	public final fun getSerialize ()Lkotlin/jvm/functions/Function1;
 	public fun getUsesBinaryFormat ()Z

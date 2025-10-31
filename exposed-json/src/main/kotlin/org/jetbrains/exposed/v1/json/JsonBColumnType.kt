@@ -4,6 +4,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.vendors.H2Dialect
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
@@ -25,6 +26,8 @@ class JsonBColumnType<T : Any>(
         is H2Dialect -> (currentDialect as H2Dialect).originalDataTypeProvider.jsonBType()
         else -> currentDialect.dataTypeProvider.jsonBType()
     }
+
+    override fun clone(): IColumnType<T> = JsonBColumnType(serialize, deserialize)
 }
 
 /**

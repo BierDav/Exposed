@@ -23,6 +23,7 @@ class KotlinLocalDateColumnType : LocalDateColumnType<LocalDate>() {
     override fun toLocalDate(value: LocalDate) = value
 
     override fun fromLocalDate(value: LocalDate) = value
+    override fun clone(): IColumnType<LocalDate> = KotlinLocalDateColumnType()
 
     companion object {
         internal val INSTANCE = KotlinLocalDateColumnType()
@@ -44,6 +45,8 @@ class KotlinLocalDateTimeColumnType : LocalDateTimeColumnType<LocalDateTime>() {
         else -> super.valueFromDB(value)
     }
 
+    override fun clone(): IColumnType<LocalDateTime> = KotlinLocalDateTimeColumnType()
+
     companion object {
         internal val INSTANCE = KotlinLocalDateTimeColumnType()
     }
@@ -64,6 +67,8 @@ class KotlinLocalTimeColumnType : LocalTimeColumnType<LocalTime>() {
         else -> super.valueFromDB(value)
     }
 
+    override fun clone(): IColumnType<LocalTime> = KotlinLocalTimeColumnType()
+
     companion object {
         internal val INSTANCE = KotlinLocalTimeColumnType()
     }
@@ -82,6 +87,7 @@ class XKotlinInstantColumnType : InstantColumnType<xInstant>() {
     override fun toInstant(value: xInstant) = value.toStdlibInstant()
 
     override fun fromInstant(instant: Instant) = instant.toDeprecatedInstant()
+    override fun clone(): IColumnType<xInstant> = XKotlinInstantColumnType()
 
     companion object {
         internal val INSTANCE = XKotlinInstantColumnType()
@@ -97,6 +103,7 @@ class KotlinInstantColumnType : InstantColumnType<Instant>() {
     override fun toInstant(value: Instant) = value
 
     override fun fromInstant(instant: Instant) = instant
+    override fun clone(): IColumnType<Instant> = KotlinInstantColumnType()
 
     companion object {
         internal val INSTANCE = KotlinInstantColumnType()
@@ -112,6 +119,7 @@ class KotlinOffsetDateTimeColumnType : OffsetDateTimeColumnType<OffsetDateTime>(
     override fun toOffsetDateTime(value: OffsetDateTime) = value
 
     override fun fromOffsetDateTime(datetime: OffsetDateTime) = datetime
+    override fun clone(): IColumnType<OffsetDateTime> = KotlinOffsetDateTimeColumnType()
 
     companion object {
         internal val INSTANCE = KotlinOffsetDateTimeColumnType()
@@ -127,6 +135,7 @@ class KotlinDurationColumnType : DurationColumnType<Duration>() {
     override fun toDuration(value: Duration): Duration = value
 
     override fun fromDuration(value: Duration): Duration = value
+    override fun clone(): IColumnType<Duration> = KotlinDurationColumnType()
 
     companion object {
         internal val INSTANCE = KotlinDurationColumnType()
