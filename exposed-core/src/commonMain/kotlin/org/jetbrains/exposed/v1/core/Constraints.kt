@@ -128,15 +128,15 @@ data class ForeignKeyConstraint(
 
             if (deleteRule != ReferenceOption.NO_ACTION) {
                 if (deleteRule == ReferenceOption.RESTRICT && !currentDialect.supportsRestrictReferenceOption) {
-                    exposedLogger.warn(
+                    exposedLogger.warn {
                         "${currentDialect.name} doesn't support FOREIGN KEY with RESTRICT reference option with ON DELETE clause. " +
-                            "Please check your $fromTableName table."
-                    )
+                                "Please check your $fromTableName table."
+                    }
                 } else if (deleteRule == ReferenceOption.SET_DEFAULT && !currentDialect.supportsSetDefaultReferenceOption) {
-                    exposedLogger.warn(
+                    exposedLogger.warn {
                         "${currentDialect.name} doesn't support FOREIGN KEY with SET DEFAULT reference option with ON DELETE clause. " +
-                            "Please check your $fromTableName table."
-                    )
+                                "Please check your $fromTableName table."
+                    }
                 } else {
                     append(" ON DELETE $deleteRule")
                 }
@@ -144,17 +144,17 @@ data class ForeignKeyConstraint(
 
             if (updateRule != ReferenceOption.NO_ACTION) {
                 if (!currentDialect.supportsOnUpdate) {
-                    exposedLogger.warn("${currentDialect.name} doesn't support FOREIGN KEY with ON UPDATE clause. Please check your $fromTableName table.")
+                    exposedLogger.warn { "${currentDialect.name} doesn't support FOREIGN KEY with ON UPDATE clause. Please check your $fromTableName table." }
                 } else if (updateRule == ReferenceOption.RESTRICT && !currentDialect.supportsRestrictReferenceOption) {
-                    exposedLogger.warn(
+                    exposedLogger.warn {
                         "${currentDialect.name} doesn't support FOREIGN KEY with RESTRICT reference option with ON UPDATE clause. " +
-                            "Please check your $fromTableName table."
-                    )
+                                "Please check your $fromTableName table."
+                    }
                 } else if (updateRule == ReferenceOption.SET_DEFAULT && !currentDialect.supportsSetDefaultReferenceOption) {
-                    exposedLogger.warn(
+                    exposedLogger.warn {
                         "${currentDialect.name} doesn't support FOREIGN KEY with SET DEFAULT reference option with ON UPDATE clause. " +
-                            "Please check your $fromTableName table."
-                    )
+                                "Please check your $fromTableName table."
+                    }
                 } else {
                     append(" ON UPDATE $updateRule")
                 }
@@ -202,7 +202,7 @@ data class CheckConstraint(
 
     override fun createStatement(): List<String> {
         return if (currentDialect.cannotAlterCheckConstraint) {
-            exposedLogger.warn("Creation of CHECK constraints is not currently supported by ${currentDialect.name}")
+            exposedLogger.warn { "Creation of CHECK constraints is not currently supported by ${currentDialect.name}" }
             listOf()
         } else {
             listOf("ALTER TABLE $tableName ADD $checkPart")
@@ -213,7 +213,7 @@ data class CheckConstraint(
 
     override fun dropStatement(): List<String> {
         return if (currentDialect.cannotAlterCheckConstraint) {
-            exposedLogger.warn("Deletion of CHECK constraints is not currently supported by ${currentDialect.name}")
+            exposedLogger.warn { "Deletion of CHECK constraints is not currently supported by ${currentDialect.name}" }
             listOf()
         } else {
             listOf("ALTER TABLE $tableName DROP CONSTRAINT $checkName")

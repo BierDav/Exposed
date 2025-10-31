@@ -10,17 +10,16 @@ import org.jetbrains.exposed.v1.core.vendors.OracleDialect
 import org.jetbrains.exposed.v1.core.vendors.SQLServerDialect
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
 import org.jetbrains.exposed.v1.core.vendors.h2Mode
-import java.sql.Types
 
 /** @suppress */
 @InternalApi
 object ExposedMetadataUtils {
     /** Extracts result data about a specific column as [ColumnMetadata]. */
     fun RowApi.asColumnMetadata(prefetchedColumnTypes: Map<String, String> = emptyMap()): ColumnMetadata {
-        val defaultDbValue = getObject("COLUMN_DEF", java.lang.String::class.java)?.toString()?.let {
+        val defaultDbValue = getObject("COLUMN_DEF", String::class)?.toString()?.let {
             sanitizedDefault(it)
         }
-        val autoIncrement = getObject("IS_AUTOINCREMENT", java.lang.String::class.java)?.toString() == "YES"
+        val autoIncrement = getObject("IS_AUTOINCREMENT", String::class)?.toString() == "YES"
         val type = getObject("DATA_TYPE")?.toString()?.toInt() ?: 0
         val name = getStringOrThrow("COLUMN_NAME")
         val nullable = getObject("NULLABLE")?.toString()?.lowercase() in listOf("true", "1")
@@ -35,7 +34,7 @@ object ExposedMetadataUtils {
         field: String,
         transform: String.() -> String = { this }
     ): String {
-        return getObject(field, java.lang.String::class.java)
+        return getObject(field, String::class)
             ?.toString()
             ?.transform()
             ?: error("Object retrieved from field $field in current data row is null")
@@ -48,7 +47,7 @@ object ExposedMetadataUtils {
         val columnType = prefetchedColumnTypes[columnName]
             ?: result.getStringOrThrow("TYPE_NAME") { uppercase() }
         val dataType = result.getObject("DATA_TYPE")?.toString()?.toInt()
-        return if (dataType == Types.ARRAY) {
+        return if (dataType == ColumnTypes.ARRAY) {
             val baseType = columnType.substringBefore(" ARRAY")
             normalizedColumnType(baseType) + columnType.replaceBefore(" ARRAY", "")
         } else {

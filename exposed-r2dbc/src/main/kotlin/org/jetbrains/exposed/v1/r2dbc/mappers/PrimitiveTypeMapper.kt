@@ -27,7 +27,7 @@ class PrimitiveTypeMapper : TypeMapper {
             DecimalColumnType::class,
             BooleanColumnType::class,
             CharacterColumnType::class,
-            UUIDColumnType::class,
+            UuidColumnType::class,
             StringColumnType::class,
         )
 
@@ -56,7 +56,7 @@ class PrimitiveTypeMapper : TypeMapper {
             is FloatColumnType -> java.lang.Float::class.java
             is DoubleColumnType -> java.lang.Double::class.java
             is DecimalColumnType -> java.math.BigDecimal::class.java
-            is UUIDColumnType -> java.util.UUID::class.java
+            is UuidColumnType -> java.util.UUID::class.java
             is CharacterColumnType -> java.lang.String::class.java
             is BooleanColumnType -> java.lang.Boolean::class.java
             else -> return false

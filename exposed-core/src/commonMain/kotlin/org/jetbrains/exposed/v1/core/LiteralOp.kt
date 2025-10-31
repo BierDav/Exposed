@@ -1,7 +1,5 @@
 package org.jetbrains.exposed.v1.core
 
-import java.math.BigDecimal
-
 /**
  * Represents the specified [value] as an SQL literal, using the specified [columnType] to convert the value.
  */
@@ -49,9 +47,6 @@ fun doubleLiteral(value: Double): LiteralOp<Double> = LiteralOp(DoubleColumnType
 /** Returns the specified [value] as a string literal. */
 fun stringLiteral(value: String): LiteralOp<String> = LiteralOp(TextColumnType(), value)
 
-/** Returns the specified [value] as a decimal literal. */
-fun decimalLiteral(value: BigDecimal): LiteralOp<BigDecimal> = LiteralOp(DecimalColumnType(value.precision(), value.scale()), value)
-
 /**
  * Returns the specified [value] as an array literal, with elements parsed by the [delegateType] if provided.
  *
@@ -83,7 +78,7 @@ inline fun <reified T : Any, R : List<Any>> arrayLiteral(value: R, dimensions: I
 /** Returns the specified [value] as a literal of type [T]. */
 @Suppress("UNCHECKED_CAST", "ComplexMethod")
 fun <T, S : T?> ExpressionWithColumnType<S>.asLiteral(value: T): LiteralOp<T> = when {
-    value is ByteArray && columnType is BasicBinaryColumnType -> stringLiteral(value.toString(Charsets.UTF_8))
+    value is ByteArray && columnType is BasicBinaryColumnType -> stringLiteral(value.decodeToString())
     columnType is ColumnWithTransform<*, *> -> (columnType as ColumnWithTransform<Any, Any>)
         .let { LiteralOp(it.originalColumnType, it.unwrapRecursive(value)) }
     else -> LiteralOp(columnType as IColumnType<T & Any>, value)

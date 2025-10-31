@@ -16,6 +16,7 @@ import java.sql.DriverManager
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
+import kotlin.getValue
 
 /**
  * Class representing the underlying JDBC database to which connections are made and on which transaction tasks are performed.
@@ -48,11 +49,9 @@ class Database private constructor(
     }
 
     override val dialect: DatabaseDialect by lazy {
+        @OptIn(InternalApi::class)
         config.explicitDialect
-            ?: run {
-                @OptIn(InternalApi::class)
-                dialects[vendor.lowercase()]?.invoke()
-            }
+            ?: dialects[vendor.lowercase()]?.invoke()
             ?: error("No dialect registered for $name. URL=$url")
     }
 

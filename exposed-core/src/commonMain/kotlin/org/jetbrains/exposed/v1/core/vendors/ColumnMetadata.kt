@@ -9,7 +9,7 @@ data class ColumnMetadata(
     /**
      * JDBC type of the column.
      *
-     * @see java.sql.Types
+     * @see org.jetbrains.exposed.v1.core.statements.api.ColumnTypes
      */
     val jdbcType: Int,
     /** SQL type of the column. */

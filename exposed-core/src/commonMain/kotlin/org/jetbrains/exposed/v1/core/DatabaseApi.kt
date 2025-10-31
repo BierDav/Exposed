@@ -1,8 +1,8 @@
 package org.jetbrains.exposed.v1.core
 
+import co.touchlab.stately.collections.ConcurrentMutableMap
 import org.jetbrains.exposed.v1.core.statements.api.IdentifierManagerApi
 import org.jetbrains.exposed.v1.core.vendors.DatabaseDialect
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Base class representing the underlying database to which connections are made
@@ -60,7 +60,7 @@ abstract class DatabaseApi protected constructor(
     companion object {
         /** @suppress */
         @InternalApi
-        val dialects = ConcurrentHashMap<String, () -> DatabaseDialect>()
+        val dialects = ConcurrentMutableMap<String, () -> DatabaseDialect>()
 
         /** Registers a new [DatabaseDialect] with the identifier [prefix]. */
         fun registerDialect(prefix: String, dialect: () -> DatabaseDialect) {

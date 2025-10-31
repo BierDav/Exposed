@@ -10,15 +10,12 @@ import org.jetbrains.exposed.v1.core.statements.api.ExposedBlob
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.core.vendors.*
 import org.jetbrains.exposed.v1.exceptions.DuplicateColumnException
-import java.math.BigDecimal
-import java.util.*
+import kotlin.enums.enumEntries
 import kotlin.internal.LowPriorityInOverloadResolution
+import kotlin.jvm.JvmName
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty1
-import kotlin.reflect.KParameter
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.memberProperties
-import kotlin.reflect.full.primaryConstructor
+import kotlin.uuid.Uuid
 
 /** Pair of expressions used to match rows from two joined tables. */
 typealias JoinCondition = Pair<Expression<*>, Expression<*>>
@@ -405,8 +402,7 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     /** Returns the table name. */
     open val tableName: String = when {
         name.isNotEmpty() -> name
-        javaClass.`package` == null -> javaClass.name.removeSuffix("Table")
-        else -> javaClass.name.removePrefix("${javaClass.`package`.name}.").substringAfter('$').removeSuffix("Table")
+        else -> this::class.simpleName!!.removeSuffix("Table")
     }
 
     /** Returns the schema name, or null if one does not exist for this table.
@@ -665,10 +661,10 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     /** Creates an [EntityID] column, with the specified [name], for storing the same objects as the specified [originalColumn]. */
     fun <ID : Any> entityId(name: String, originalColumn: Column<ID>): Column<EntityID<ID>> {
         val columnTypeCopy = originalColumn.columnType.cloneAsBaseType()
-        val answer = Column<EntityID<ID>>(
+        val answer = Column(
             this,
             name,
-            EntityIDColumnType(Column<ID>(originalColumn.table, name, columnTypeCopy))
+            EntityIDColumnType(Column(originalColumn.table, name, columnTypeCopy))
         )
         _columns.addColumn(answer)
         return answer
@@ -779,21 +775,6 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     /** Creates a numeric column, with the specified [name], for storing 8-byte (double precision) floating-point numbers. */
     fun double(name: String): Column<Double> = registerColumn(name, DoubleColumnType())
 
-    /**
-     * Creates a numeric column, with the specified [name], for storing numbers with the specified [precision] and [scale].
-     *
-     * To store the decimal `123.45`, [precision] would have to be set to 5 (as there are five digits in total) and
-     * [scale] to 2 (as there are two digits behind the decimal point).
-     *
-     * @param name Name of the column.
-     * @param precision Total count of significant digits in the whole number, that is, the number of digits to both sides of the decimal point.
-     * @param scale Count of decimal digits in the fractional part.
-     */
-    fun decimal(name: String, precision: Int, scale: Int): Column<BigDecimal> = registerColumn(
-        name,
-        DecimalColumnType(precision, scale)
-    )
-
     // Character columns
 
     /** Creates a character column, with the specified [name], for storing single characters. */
@@ -872,18 +853,9 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
      */
     fun binary(name: String, length: Int): Column<ByteArray> = registerColumn(name, BinaryColumnType(length))
 
-    /**
-     * Creates a binary column, with the specified [name], for storing BLOBs.
-     * If [useObjectIdentifier] is `true`, then the column will use the `OID` type on PostgreSQL
-     * for storing large binary objects. The parameter must not be `true` for other databases.
-     *
-     * @sample org.jetbrains.exposed.v1.tests.shared.types.BlobColumnTypeTests.testBlob
-     */
-    fun blob(name: String, useObjectIdentifier: Boolean = false): Column<ExposedBlob> =
-        registerColumn(name, BlobColumnType(useObjectIdentifier))
 
     /** Creates a binary column, with the specified [name], for storing UUIDs. */
-    fun uuid(name: String): Column<UUID> = registerColumn(name, UUIDColumnType())
+    fun uuid(name: String): Column<Uuid> = registerColumn(name, UuidColumnType())
 
     // Boolean columns
 
@@ -893,9 +865,9 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     // Enumeration columns
 
     /** Creates an enumeration column, with the specified [name], for storing enums of type [klass] by their ordinal. */
-    fun <T : Enum<T>> enumeration(name: String, klass: KClass<T>): Column<T> = registerColumn(
+    inline fun <reified T : Enum<T>> enumeration(name: String, klass: KClass<T>): Column<T> = registerColumn(
         name,
-        EnumerationColumnType(klass)
+        EnumerationColumnType(klass, enumEntries())
     )
 
     /** Creates an enumeration column, with the specified [name], for storing enums of type [T] by their ordinal. */
@@ -905,8 +877,8 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
      * Creates an enumeration column, with the specified [name], for storing enums of type [klass] by their name.
      * With the specified maximum [length] for each name value.
      */
-    fun <T : Enum<T>> enumerationByName(name: String, length: Int, klass: KClass<T>): Column<T> =
-        registerColumn(name, EnumerationNameColumnType(klass, length))
+    inline fun <reified T : Enum<T>> enumerationByName(name: String, length: Int, klass: KClass<T>): Column<T> =
+        registerColumn(name, EnumerationNameColumnType(klass, enumEntries(), length))
 
     /**
      * Creates an enumeration column, with the specified [name], for storing enums of type [T] by their name.
@@ -1075,7 +1047,7 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
     }
 
     /** UUID column will auto generate its value on a client side just before an insert. */
-    fun Column<UUID>.autoGenerate(): Column<UUID> = clientDefault { UUID.randomUUID() }
+    fun Column<Uuid>.autoGenerate(): Column<Uuid> = clientDefault { Uuid.random() }
 
     // Column references
 
@@ -1636,7 +1608,7 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
             table.checkConstraints.add(name to op(this))
         } else {
             exposedLogger
-                .warn("A CHECK constraint with name '$name' was ignored because there is already one with that name")
+                .warn { "A CHECK constraint with name '$name' was ignored because there is already one with that name" }
         }
     }
 
@@ -1652,24 +1624,11 @@ open class Table(name: String = "") : ColumnSet(), DdlAware {
             checkConstraints.add(name to op())
         } else {
             exposedLogger
-                .warn("A CHECK constraint with name '$name' was ignored because there is already one with that name")
+                .warn { "A CHECK constraint with name '$name' was ignored because there is already one with that name" }
         }
     }
 
     // Cloning utils
-
-    private fun <T : Any> T.clone(replaceArgs: Map<KProperty1<T, *>, Any> = emptyMap()): T = javaClass.kotlin.run {
-        val consParams = primaryConstructor!!.parameters
-        val mutableProperties = memberProperties.filterIsInstance<KMutableProperty1<T, Any?>>()
-        val allValues = memberProperties
-            .filter { it in mutableProperties || it.name in consParams.map(KParameter::name) }
-            .associate { it.name to (replaceArgs[it] ?: it.get(this@clone)) }
-        primaryConstructor!!.callBy(consParams.associateWith { allValues[it.name] }).also { newInstance ->
-            for (prop in mutableProperties) {
-                prop.set(newInstance, allValues[prop.name])
-            }
-        }
-    }
 
     private fun <T> IColumnType<T>.cloneAsBaseType(): IColumnType<T> = ((this as? AutoIncColumnType)?.delegate ?: this).clone()
 

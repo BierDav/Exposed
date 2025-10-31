@@ -189,6 +189,7 @@ internal open class MysqlFunctionProvider : FunctionProvider() {
 
     private object CharColumnType : StringColumnType() {
         override fun sqlType(): String = "CHAR"
+        override fun clone(): IColumnType<String> = CharColumnType
     }
 
     override fun cast(expr: Expression<*>, type: IColumnType<*>, builder: QueryBuilder) = when (type) {
@@ -389,9 +390,9 @@ open class MysqlDialect : VendorDialect(dialectName, MysqlDataTypeProvider.INSTA
 
     override fun createIndex(index: Index): String {
         if (index.functions != null && !isMysql8) {
-            exposedLogger.warn(
+            exposedLogger.warn {
                 "Functional index on ${index.table.tableName} using ${index.functions.joinToString { it.toString() }} can't be created in MySQL prior to 8.0"
-            )
+            }
             return ""
         }
         return super.createIndex(index)

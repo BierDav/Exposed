@@ -8,17 +8,8 @@ import org.jetbrains.exposed.v1.core.statements.api.PreparedStatementApi
 import org.jetbrains.exposed.v1.core.statements.api.RowApi
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.core.vendors.*
-import java.io.InputStream
-import java.math.BigDecimal
-import java.math.BigInteger
-import java.math.MathContext
-import java.math.RoundingMode
-import java.nio.ByteBuffer
-import java.sql.Blob
-import java.sql.Clob
-import java.util.*
 import kotlin.reflect.KClass
-import kotlin.reflect.full.isSubclassOf
+import kotlin.uuid.Uuid
 
 /**
  * Interface common to all column types.
@@ -110,23 +101,27 @@ interface IColumnType<T> {
      * in Postgres a parameter marker can be explicitly cast to a specific type, etc.
      */
     fun parameterMarker(value: T?) = "?"
+
+    fun clone(): IColumnType<T>
 }
 
 /**
  * Standard column type.
  */
 abstract class ColumnType<T>(override var nullable: Boolean = false) : IColumnType<T> {
-    override fun toString(): String = sqlType()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
 
         other as ColumnType<*>
 
         return nullable == other.nullable
     }
 
-    override fun hashCode(): Int = 31 * javaClass.hashCode() + nullable.hashCode()
+    override fun hashCode(): Int {
+        return nullable.hashCode()
+    }
 }
 
 /**
@@ -207,6 +202,11 @@ class AutoIncColumnType<T>(
         result = 31 * result + (_sequence?.hashCode() ?: 0)
         return result
     }
+
+    override fun clone(): IColumnType<T> {
+        // Clone both the wrapper and its delegate
+        return AutoIncColumnType<T>(delegate.clone() as ColumnType<T>, autoincSeq, fallbackSeqName)
+    }
 }
 
 /** Returns `true` if this is an auto-increment column, `false` otherwise. */
@@ -235,7 +235,7 @@ internal fun Column<*>.isEntityIdentifier(): Boolean {
 /**
  * Identity column type for storing unique [EntityID] values.
  */
-class EntityIDColumnType<T : Any>(
+data class EntityIDColumnType<T : Any>(
     /** The underlying wrapped column storing the identity values. */
     val idColumn: Column<T>
 ) : ColumnType<EntityID<T>>() {
@@ -260,6 +260,8 @@ class EntityIDColumnType<T : Any>(
     )
 
     override fun readObject(rs: RowApi, index: Int): Any? = idColumn.columnType.readObject(rs, index)
+
+    override fun clone(): IColumnType<EntityID<T>> = copy()
 
     override fun equals(other: Any?): Boolean {
         if (other !is EntityIDColumnType<*>) return false
@@ -378,6 +380,10 @@ open class ColumnWithTransform<Unwrapped, Wrapped>(
     override fun parameterMarker(value: Wrapped?): String {
         return delegate.parameterMarker(value?.let { transformer.unwrap(it) })
     }
+
+    override fun clone(): IColumnType<Wrapped & Any> {
+        return ColumnWithTransform(delegate.clone(), transformer)
+    }
 }
 
 /**
@@ -453,6 +459,11 @@ class ByteColumnType : ColumnType<Byte>() {
             super.valueToDB(value)
         }
     }
+
+    override fun clone(): IColumnType<Byte> {
+        return ByteColumnType()
+    }
+
 }
 
 /**
@@ -483,6 +494,8 @@ class UByteColumnType : ColumnType<UByte>() {
         super.setParameter(stmt, index, v)
     }
 
+    override fun clone(): IColumnType<UByte> = UByteColumnType()
+
     override fun notNullValueToDB(value: UByte): Any = value.toShort()
 }
 
@@ -497,6 +510,8 @@ class ShortColumnType : ColumnType<Short>() {
         is String -> value.toShort()
         else -> error("Unexpected value of type Short: $value of ${value::class.qualifiedName}")
     }
+
+    override fun clone(): IColumnType<Short> = ShortColumnType()
 }
 
 /**
@@ -525,6 +540,8 @@ class UShortColumnType : ColumnType<UShort>() {
         super.setParameter(stmt, index, v)
     }
 
+    override fun clone(): IColumnType<UShort> = UShortColumnType()
+
     override fun notNullValueToDB(value: UShort): Any = value.toInt()
 }
 
@@ -539,6 +556,8 @@ class IntegerColumnType : ColumnType<Int>() {
         is String -> value.toInt()
         else -> error("Unexpected value of type Int: $value of ${value::class.qualifiedName}")
     }
+
+    override fun clone(): IColumnType<Int> = IntegerColumnType()
 }
 
 /**
@@ -568,6 +587,8 @@ class UIntegerColumnType : ColumnType<UInt>() {
         super.setParameter(stmt, index, v)
     }
 
+    override fun clone(): IColumnType<UInt> = UIntegerColumnType()
+
     override fun notNullValueToDB(value: UInt): Any = value.toLong()
 }
 
@@ -582,6 +603,8 @@ class LongColumnType : ColumnType<Long>() {
         is String -> value.toLong()
         else -> error("Unexpected value of type Long: $value of ${value::class.qualifiedName}")
     }
+
+    override fun clone(): IColumnType<Long> = LongColumnType()
 }
 
 /**
@@ -598,33 +621,18 @@ class ULongColumnType : ColumnType<ULong>() {
                 valueFromDB(value.toString())
             }
 
-            is String -> {
-                value.toBigInteger().takeIf {
-                    it >= "0".toBigInteger() && it <= ULong.MAX_VALUE.toString().toBigInteger()
-                }?.toString()?.toULong()
-            }
+            is String -> value.toULongOrNull()
 
             else -> error("Unexpected value of type Long: $value of ${value::class.qualifiedName}")
         } ?: error("Negative value but type is ULong: $value")
     }
 
-    override fun notNullValueToDB(value: ULong): Any {
-        val dialect = currentDialect
-        return when {
-            // PostgreSQLNG does not throw `out of range` error, so it's handled here to prevent storing invalid values
-            dialect is PostgreSQLNGDialect -> {
-                value.takeIf { it >= 0uL && it <= Long.MAX_VALUE.toULong() }?.toLong()
-                    ?: error("Value out of range: $value")
-            }
-
-            dialect is PostgreSQLDialect -> BigInteger(value.toString())
-            // Long is also an accepted mapping, but this would require handling as above for Oor errors
-            dialect is H2Dialect -> BigDecimal(value.toString())
-
-            else -> value.toString()
-        }
-    }
+    override fun notNullValueToDB(value: ULong): Any = uLongNotNullValueToDb(value)
+    override fun clone(): IColumnType<ULong> = ULongColumnType()
 }
+
+internal expect fun uLongNotNullValueToDb(value: ULong): Any
+
 
 /**
  * Numeric column for storing 4-byte (single precision) floating-point numbers.
@@ -649,6 +657,8 @@ class FloatColumnType : ColumnType<Float>() {
             }
         }
     }
+
+    override fun clone(): IColumnType<Float> = FloatColumnType()
 }
 
 /**
@@ -676,66 +686,8 @@ class DoubleColumnType : ColumnType<Double>() {
             }
         }
     }
-}
 
-/**
- * Numeric column for storing numbers with the specified [precision] and [scale].
- */
-class DecimalColumnType(
-    /** Total count of significant digits in the whole number. */
-    val precision: Int,
-    /** Count of decimal digits in the fractional part. */
-    val scale: Int
-) : ColumnType<BigDecimal>() {
-    override fun sqlType(): String = "DECIMAL($precision, $scale)"
-
-    override fun valueFromDB(value: Any): BigDecimal = when (value) {
-        is BigDecimal -> value
-        is Double -> {
-            if (value.isNaN()) {
-                error("Unexpected value of type Double: NaN of ${value::class.qualifiedName}")
-            } else {
-                value.toBigDecimal()
-            }
-        }
-
-        is Float -> {
-            if (value.isNaN()) {
-                error("Unexpected value of type Float: NaN of ${value::class.qualifiedName}")
-            } else {
-                value.toBigDecimal()
-            }
-        }
-
-        is Long -> value.toBigDecimal()
-        is Int -> value.toBigDecimal()
-        is Short -> value.toLong().toBigDecimal()
-        else -> error("Unexpected value of type Decimal: $value of ${value::class.qualifiedName}")
-    }.setScale(scale, RoundingMode.HALF_EVEN)
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        if (!super.equals(other)) return false
-
-        other as DecimalColumnType
-
-        if (precision != other.precision) return false
-        if (scale != other.scale) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + precision
-        result = 31 * result + scale
-        return result
-    }
-
-    companion object {
-        internal val INSTANCE = DecimalColumnType(MathContext.DECIMAL64.precision, 20)
-    }
+    override fun clone(): IColumnType<Double> = DoubleColumnType()
 }
 
 // Character columns
@@ -755,6 +707,7 @@ class CharacterColumnType : ColumnType<Char>() {
     override fun notNullValueToDB(value: Char): Any = value.toString()
 
     override fun nonNullValueToString(value: Char): String = "'$value'"
+    override fun clone(): IColumnType<Char> = CharacterColumnType()
 }
 
 /**
@@ -773,11 +726,7 @@ abstract class StringColumnType(
         else -> escape(value)
     }
 
-    override fun valueFromDB(value: Any): String = when (value) {
-        is Clob -> value.characterStream.readText()
-        is ByteArray -> String(value)
-        else -> value.toString()
-    }
+    override fun valueFromDB(value: Any): String = stringValueFromDb(value)
 
     override fun nonNullValueToString(value: String): String = buildString {
         append('\'')
@@ -787,7 +736,7 @@ abstract class StringColumnType(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as StringColumnType
@@ -801,6 +750,7 @@ abstract class StringColumnType(
         return result
     }
 
+
     companion object {
         private val charactersToEscape = mapOf(
             '\'' to "\'\'",
@@ -809,6 +759,8 @@ abstract class StringColumnType(
         )
     }
 }
+
+internal expect fun stringValueFromDb(value: Any): String
 
 /**
  * Character column for storing strings with the exact [colLength] length using the specified [collate] type.
@@ -827,24 +779,22 @@ open class CharColumnType(
 
     override fun validateValueBeforeUpdate(value: String?) {
         if (value is String) {
-            val valueLength = value.codePointCount(0, value.length)
+            val valueLength = value.codePointCount
             require(valueLength <= colLength) {
                 "Value can't be stored to database column because exceeds length ($valueLength > $colLength)"
             }
         }
     }
 
+    override fun clone(): IColumnType<String> = CharColumnType(colLength, collate)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as CharColumnType
 
-        if (colLength != other.colLength) return false
-
-        if (collate != other.collate) return false
-        return true
+        return colLength == other.colLength
     }
 
     override fun hashCode(): Int {
@@ -873,16 +823,18 @@ open class VarCharColumnType(
 
     override fun validateValueBeforeUpdate(value: String?) {
         if (value is String) {
-            val valueLength = value.codePointCount(0, value.length)
+            val valueLength = value.codePointCount
             require(valueLength <= colLength) {
                 "Value can't be stored to database column because exceeds length ($valueLength > $colLength)"
             }
         }
     }
 
+    override fun clone(): IColumnType<String> = VarCharColumnType(colLength, collate)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as VarCharColumnType
@@ -923,6 +875,8 @@ open class TextColumnType(
             value
         }
     }
+
+    override fun clone(): IColumnType<String> = TextColumnType(collate, eagerLoading)
 }
 
 open class MediumTextColumnType(
@@ -930,6 +884,8 @@ open class MediumTextColumnType(
     eagerLoading: Boolean = false
 ) : TextColumnType(collate, eagerLoading) {
     override fun preciseType(): String = currentDialect.dataTypeProvider.mediumTextType()
+
+    override fun clone(): IColumnType<String> = MediumTextColumnType(collate, eagerLoading)
 }
 
 open class LargeTextColumnType(
@@ -937,6 +893,8 @@ open class LargeTextColumnType(
     eagerLoading: Boolean = false
 ) : TextColumnType(collate, eagerLoading) {
     override fun preciseType(): String = currentDialect.dataTypeProvider.largeTextType()
+
+    override fun clone(): IColumnType<String> = LargeTextColumnType(collate, eagerLoading)
 }
 
 // Binary columns
@@ -947,17 +905,13 @@ open class LargeTextColumnType(
 open class BasicBinaryColumnType : ColumnType<ByteArray>() {
     override fun sqlType(): String = currentDialect.dataTypeProvider.binaryType()
 
-    override fun valueFromDB(value: Any): ByteArray = when (value) {
-        is Blob -> value.binaryStream.use { it.readBytes() }
-        is InputStream -> value.use { it.readBytes() }
-        is ByteArray -> value
-        is String -> value.toByteArray()
-        is ByteBuffer -> value.array()
-        else -> error("Unexpected value $value of type ${value::class.qualifiedName}")
-    }
+    override fun valueFromDB(value: Any): ByteArray = basicBinaryValueFromDb(value)
 
-    override fun nonNullValueToString(value: ByteArray): String = value.toString(Charsets.UTF_8)
+    override fun nonNullValueToString(value: ByteArray): String = value.decodeToString()
+    override fun clone(): IColumnType<ByteArray> = BasicBinaryColumnType()
 }
+
+internal expect fun basicBinaryValueFromDb(value: Any): ByteArray
 
 /**
  * Binary column for storing binary strings of a specific [length].
@@ -977,9 +931,11 @@ open class BinaryColumnType(
         }
     }
 
+    override fun clone(): IColumnType<ByteArray> = BinaryColumnType(length)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as BinaryColumnType
@@ -995,86 +951,40 @@ open class BinaryColumnType(
 }
 
 /**
- * Binary column for storing BLOBs.
- */
-class BlobColumnType(
-    /** Returns whether an OID column should be used instead of BYTEA. This value only applies to PostgreSQL databases. */
-    val useObjectIdentifier: Boolean = false
-) : ColumnType<ExposedBlob>() {
-    override fun sqlType(): String = when {
-        useObjectIdentifier && currentDialect is PostgreSQLDialect -> "oid"
-        useObjectIdentifier -> error("Storing BLOBs using OID columns is only supported by PostgreSQL")
-        else -> currentDialect.dataTypeProvider.blobType()
-    }
-
-    override fun valueFromDB(value: Any): ExposedBlob = when (value) {
-        is ExposedBlob -> value
-        is InputStream -> ExposedBlob(value)
-        is ByteArray -> ExposedBlob(value)
-        is Blob -> ExposedBlob(value.binaryStream)
-        is ByteBuffer -> ExposedBlob(value.array())
-        else -> error("Unexpected value of type Blob: $value of ${value::class.qualifiedName}")
-    }
-
-    override fun nonNullValueToString(value: ExposedBlob): String {
-        // For H2 Blobs the original dataTypeProvider must be taken (even if H2 in other DB mode)
-        return ((currentDialect as? H2Dialect)?.originalDataTypeProvider ?: currentDialect.dataTypeProvider)
-            .hexToDb(value.hexString())
-    }
-
-    override fun readObject(rs: RowApi, index: Int) = when {
-        currentDialect is PostgreSQLDialect && useObjectIdentifier -> {
-            rs.getObject(index, java.sql.Blob::class.java)?.binaryStream?.let(::ExposedBlob)
-        }
-        else -> rs.getObject(index)
-    }
-
-    override fun setParameter(stmt: PreparedStatementApi, index: Int, value: Any?) {
-        when (val toSetValue = (value as? ExposedBlob)?.inputStream ?: value) {
-            is InputStream -> stmt.setInputStream(index, toSetValue, useObjectIdentifier)
-            null, is Op.NULL -> stmt.setNull(index, this)
-            else -> super.setParameter(stmt, index, toSetValue)
-        }
-    }
-}
-
-/**
  * Binary column for storing [UUID].
  */
-class UUIDColumnType : ColumnType<UUID>() {
+class UuidColumnType : ColumnType<Uuid>() {
     override fun sqlType(): String = currentDialect.dataTypeProvider.uuidType()
 
-    override fun valueFromDB(value: Any): UUID = when {
-        value is UUID -> value
-        value is ByteArray -> ByteBuffer.wrap(value).let { b -> UUID(b.long, b.long) }
-        value is String && value.matches(uuidRegexp) -> UUID.fromString(value)
-        value is String -> ByteBuffer.wrap(value.toByteArray()).let { b -> UUID(b.long, b.long) }
-        value is ByteBuffer -> value.let { b -> UUID(b.long, b.long) }
-        else -> error("Unexpected value of type UUID: $value of ${value::class.qualifiedName}")
-    }
+    override fun valueFromDB(value: Any): Uuid = uuidValueFromDb(value)
 
-    override fun notNullValueToDB(value: UUID): Any {
+
+    override fun notNullValueToDB(value: Uuid): Any {
         return ((currentDialect as? H2Dialect)?.originalDataTypeProvider ?: currentDialect.dataTypeProvider)
             .uuidToDB(value)
     }
 
-    override fun nonNullValueToString(value: UUID): String = "'$value'"
+    override fun nonNullValueToString(value: Uuid): String = "'$value'"
 
     @Suppress("MagicNumber")
     override fun readObject(rs: RowApi, index: Int): Any? {
         @OptIn(InternalApi::class)
         val db = CoreTransactionManager.currentTransaction().db
         if (currentDialect is MariaDBDialect && !db.version.covers(10)) {
-            return rs.getObject(index, java.sql.Array::class.java)
+            return rs.getObject(index, Array::class)
         }
         return super.readObject(rs, index)
     }
 
+    override fun clone(): IColumnType<Uuid> = UuidColumnType()
+
     companion object {
-        private val uuidRegexp =
+        internal val uuidRegexp =
             Regex("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}", RegexOption.IGNORE_CASE)
     }
 }
+
+internal expect fun uuidValueFromDb(value: Any): Uuid
 
 // Boolean columns
 
@@ -1092,6 +1002,8 @@ class BooleanColumnType : ColumnType<Boolean>() {
 
     override fun nonNullValueToString(value: Boolean): String =
         currentDialect.dataTypeProvider.booleanToStatementString(value)
+
+    override fun clone(): IColumnType<Boolean> = BooleanColumnType()
 
     override fun notNullValueToDB(value: Boolean): Any = when {
         (currentDialect is OracleDialect || currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle) ->
@@ -1111,11 +1023,10 @@ class BooleanColumnType : ColumnType<Boolean>() {
  * Enumeration column for storing enums of type [klass] by their ordinal.
  */
 class EnumerationColumnType<T : Enum<T>>(
-    /** Returns the enum class used in this column type. */
-    val klass: KClass<T>
+    val klass: KClass<T>,
+    private val enumConstants: List<T>
 ) : ColumnType<T>() {
     override fun sqlType(): String = currentDialect.dataTypeProvider.integerType()
-    private val enumConstants by lazy { klass.java.enumConstants!! }
 
     @Suppress("UNCHECKED_CAST")
     override fun valueFromDB(value: Any): T = when (value) {
@@ -1125,20 +1036,25 @@ class EnumerationColumnType<T : Enum<T>>(
     }
 
     override fun notNullValueToDB(value: T): Int = value.ordinal
+    override fun clone(): IColumnType<T> = EnumerationColumnType(klass, enumConstants)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as EnumerationColumnType<*>
 
-        return klass == other.klass
+        if (klass != other.klass) return false
+        if (enumConstants != other.enumConstants) return false
+
+        return true
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + klass.hashCode()
+        result = 31 * result + enumConstants.hashCode()
         return result
     }
 }
@@ -1149,16 +1065,20 @@ class EnumerationColumnType<T : Enum<T>>(
 class EnumerationNameColumnType<T : Enum<T>>(
     /** Returns the enum class used in this column type. */
     val klass: KClass<T>,
+    private val enumConstants: List<T>,
     val colLength: Int
 ) : ColumnType<T>() {
-    private val enumConstants by lazy { klass.java.enumConstants!!.associateBy { it.name } }
+
+    private val enumConstantsByName: Map<String, T> by lazy {
+        enumConstants.associateBy { it.name }
+    }
 
     override fun sqlType(): String = currentDialect.dataTypeProvider.varcharType(colLength)
 
     @Suppress("UNCHECKED_CAST")
     override fun valueFromDB(value: Any): T = when (value) {
         is String -> {
-            enumConstants[value] ?: error("$value can't be associated with any from enum ${klass.qualifiedName}")
+            enumConstantsByName[value] ?: error("$value can't be associated with any from enum ${klass.qualifiedName}")
         }
 
         is Enum<*> -> value as T
@@ -1175,30 +1095,38 @@ class EnumerationNameColumnType<T : Enum<T>>(
 
     override fun validateValueBeforeUpdate(value: T?) {
         if (value != null) {
-            val valueLength = value.name.codePointCount(0, value.name.length)
+            val valueLength = value.name.codePointCount
             require(valueLength <= colLength) {
                 "Value can't be stored to database column because exceeds length ($valueLength > $colLength)"
             }
         }
     }
 
+    override fun clone(): IColumnType<T> = EnumerationNameColumnType(klass, enumConstants, colLength)
+
+
+    private fun escape(value: String): String = value.map { charactersToEscape[it] ?: it }.joinToString("")
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
         if (!super.equals(other)) return false
 
         other as EnumerationNameColumnType<*>
 
-        return klass == other.klass
+        if (colLength != other.colLength) return false
+        if (klass != other.klass) return false
+        if (enumConstants != other.enumConstants) return false
+
+        return true
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
+        result = 31 * result + colLength
         result = 31 * result + klass.hashCode()
+        result = 31 * result + enumConstants.hashCode()
         return result
     }
-
-    private fun escape(value: String): String = value.map { charactersToEscape[it] ?: it }.joinToString("")
 
     companion object {
         private val charactersToEscape = mapOf(
@@ -1225,8 +1153,7 @@ class CustomEnumerationColumnType<T : Enum<T>>(
     override fun sqlType(): String = sql ?: error("Column $name should exist in database")
 
     @Suppress("UNCHECKED_CAST")
-    override fun valueFromDB(value: Any): T = if (value::class.isSubclassOf(Enum::class)) value as T else fromDb(value)
-
+    override fun valueFromDB(value: Any): T = if (value is Enum<*>) value as T else fromDb(value)
     override fun notNullValueToDB(value: T): Any = toDb(value)
 
     override fun nonNullValueToString(value: T): String = buildString {
@@ -1234,6 +1161,8 @@ class CustomEnumerationColumnType<T : Enum<T>>(
         append(escape(notNullValueToDB(value).toString()))
         append('\'')
     }
+
+    override fun clone(): IColumnType<T> = CustomEnumerationColumnType(name, sql, fromDb, toDb)
 
     private fun escape(value: String): String = value.map { charactersToEscape[it] ?: it }.joinToString("")
 
@@ -1311,9 +1240,8 @@ class ArrayColumnType<T, R : List<Any?>>(
 
     @Suppress("UNCHECKED_CAST")
     override fun valueFromDB(value: Any): R? {
-        return when (value) {
+        return when (arrayConvertValuesFromDb(value)) {
             is Array<*> -> recursiveValueFromDB(value, dimensions) as R?
-            is java.sql.Array -> recursiveValueFromDB(value.array, dimensions) as R?
             else -> value as R?
         }
     }
@@ -1367,7 +1295,7 @@ class ArrayColumnType<T, R : List<Any?>>(
             // This cast is needed for array types inside upsert(merge statement), otherwise statement causes "Data conversion error converting" error.
             is ByteColumnType, is UByteColumnType, is BooleanColumnType, is ShortColumnType, is UShortColumnType,
             is IntegerColumnType, is UIntegerColumnType, is LongColumnType, is ULongColumnType, is FloatColumnType,
-            is DoubleColumnType, is StringColumnType, is CharacterColumnType, is BasicBinaryColumnType, is UUIDColumnType ->
+            is DoubleColumnType, is StringColumnType, is CharacterColumnType, is BasicBinaryColumnType, is UuidColumnType ->
                 "cast(? as ${columnType.sqlType()} array)"
             else -> null
         }
@@ -1379,6 +1307,7 @@ class ArrayColumnType<T, R : List<Any?>>(
             return castH2ParameterMarker(columnType) ?: super.parameterMarker(value)
         }
 
+
         // For PostgreSQL, add a cast for date arrays to ensure they're properly recognized
         if (currentDialect is PostgreSQLDialect && delegate is IDateColumnType) {
             val pgType = if (delegate.hasTimePart) "timestamp[]" else "date[]"
@@ -1387,7 +1316,12 @@ class ArrayColumnType<T, R : List<Any?>>(
 
         return super.parameterMarker(value)
     }
+
+    override fun clone(): IColumnType<R> = ArrayColumnType(delegate.clone(), maximumCardinality, dimensions)
 }
+
+
+internal expect fun arrayConvertValuesFromDb(value: Any): Array<*>?
 
 private fun isArrayOfByteArrays(value: Array<*>) =
     value.all { it is ByteArray }
@@ -1422,7 +1356,8 @@ fun <T : Any> resolveColumnType(
     klass: KClass<T>,
     defaultType: ColumnType<*>? = null
 ): ColumnType<T> {
-    val type = when (klass) {
+    val platformType = resolvePlatformColumnType(klass)
+    val type = platformType ?: when (klass) {
         Boolean::class -> BooleanColumnType()
         Byte::class -> ByteColumnType()
         UByte::class -> UByteColumnType()
@@ -1437,12 +1372,45 @@ fun <T : Any> resolveColumnType(
         String::class -> TextColumnType()
         Char::class -> CharacterColumnType()
         ByteArray::class -> BasicBinaryColumnType()
-        BigDecimal::class -> DecimalColumnType.INSTANCE
-        UUID::class -> UUIDColumnType()
+        Uuid::class -> UuidColumnType()
         else -> defaultType
     } as? ColumnType<T>
 
     return type ?: error(
         "A column type could not be associated with ${klass.qualifiedName}. Provide an explicit column type argument."
     )
+}
+
+
+internal expect inline fun <T : Any> resolvePlatformColumnType(
+    klass: KClass<T>,
+): ColumnType<T>?
+
+
+/**
+ * A KMP-compatible extension to count Unicode code points in a String.
+ */
+val String.codePointCount: Int
+    get() {
+        var count = 0
+        var i = 0
+        val len = this.length
+        while (i < len) {
+            count++
+            val char = this[i]
+            // Check for a surrogate pair (which represents one code point)
+            if (char.isHighSurrogate() && i + 1 < len && this[i + 1].isLowSurrogate()) {
+                i += 2 // Skip both Chars in the pair
+            } else {
+                i += 1 // Move to the next Char
+            }
+        }
+        return count
+    }
+
+internal expect class PlatformBlobColumnType {
+    /**
+     * Works only on JVM. On all other platforms `false` is returned
+     */
+    val useObjectIdentifier: Boolean
 }

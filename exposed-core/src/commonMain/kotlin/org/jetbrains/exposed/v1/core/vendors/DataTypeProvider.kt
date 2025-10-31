@@ -3,8 +3,7 @@ package org.jetbrains.exposed.v1.core.vendors
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.Function
 import org.jetbrains.exposed.v1.exceptions.UnsupportedByDialectException
-import java.nio.ByteBuffer
-import java.util.*
+import kotlin.uuid.Uuid
 
 /**
  * Provides definitions for all the supported SQL data types.
@@ -100,8 +99,8 @@ abstract class DataTypeProvider {
 
     /** Returns a database-compatible object from the specified UUID [value]. */
     @Suppress("MagicNumber")
-    open fun uuidToDB(value: UUID): Any =
-        ByteBuffer.allocate(16).putLong(value.mostSignificantBits).putLong(value.leastSignificantBits).array()
+    open fun uuidToDB(value: Uuid): Any =
+        value.toByteArray()
 
     // Date/Time types
 

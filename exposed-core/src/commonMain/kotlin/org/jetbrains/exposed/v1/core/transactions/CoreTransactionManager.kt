@@ -1,12 +1,14 @@
 package org.jetbrains.exposed.v1.core.transactions
 
+import co.touchlab.stately.collections.ConcurrentMutableList
+import co.touchlab.stately.collections.ConcurrentMutableMap
+import co.touchlab.stately.concurrency.ThreadLocalRef
+import kotlinx.atomicfu.atomic
 import org.jetbrains.exposed.v1.core.DatabaseApi
 import org.jetbrains.exposed.v1.core.InternalApi
 import org.jetbrains.exposed.v1.core.Transaction
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.collections.set
+import kotlin.native.concurrent.ThreadLocal
 
 /**
  * Represents the object responsible for storing internal data related to each registered database
@@ -15,12 +17,12 @@ import kotlin.collections.set
  */
 @InternalApi
 object CoreTransactionManager {
-    private val databases = ConcurrentLinkedDeque<DatabaseApi>()
+    private val databases = ConcurrentMutableList<DatabaseApi>()
 
-    private val currentDefaultDatabase = AtomicReference<DatabaseApi>()
+    private var currentDefaultDatabase = atomic<DatabaseApi?>(null)
 
     /** Returns the database that has been set as the default for all transactions. */
-    fun getDefaultDatabase(): DatabaseApi? = currentDefaultDatabase.get()
+    fun getDefaultDatabase(): DatabaseApi? = currentDefaultDatabase.value
 
     /**
      * Returns the database that has been set as the default for all transactions, or, if none was set,
@@ -30,14 +32,14 @@ object CoreTransactionManager {
 
     /** Sets the specified database instance as the default for all transactions. */
     fun setDefaultDatabase(db: DatabaseApi?) {
-        currentDefaultDatabase.set(db)
+        currentDefaultDatabase.value = db
     }
 
-    private val registeredDatabases = ConcurrentHashMap<DatabaseApi, TransactionManagerApi>()
+    private val registeredDatabases = ConcurrentMutableMap<DatabaseApi, TransactionManagerApi>()
 
     /**
      * Returns the transaction manager instance that is associated with the provided database key,
-     * or `null` if  a manager has not been registered for the database.
+     * or `null` if a manager has not been registered for the database.
      */
     fun getDatabaseManager(db: DatabaseApi): TransactionManagerApi? = registeredDatabases[db]
 
@@ -49,7 +51,7 @@ object CoreTransactionManager {
             currentThreadManager.remove()
         }
         if (!registeredDatabases.containsKey(db)) {
-            databases.push(db)
+            databases.add(db)
         }
 
         registeredDatabases[db] = manager
@@ -72,7 +74,7 @@ object CoreTransactionManager {
     }
 
     /** Returns the transaction manager instance stored in the current thread's copy of its thread-local variable. */
-    fun getCurrentThreadManager(): TransactionManagerApi = currentThreadManager.get()
+    fun getCurrentThreadManager(): TransactionManagerApi = currentThreadManager.get() ?: error("No transaction manager in context.")
 
     /**
      * Sets the current thread's copy of its thread-local variable to the specified [manager] instance,
@@ -95,26 +97,29 @@ object CoreTransactionManager {
      */
     fun currentTransaction(): Transaction = currentTransactionOrNull() ?: error("No transaction in context.")
 
-    private class TransactionManagerThreadLocal : ThreadLocal<TransactionManagerApi>() {
+    private class TransactionManagerThreadLocal {
+        val threadLocal = ThreadLocalRef<TransactionManagerApi>()
         var isInitialized = false
 
-        override fun get(): TransactionManagerApi {
-            return super.get()
-        }
 
-        override fun initialValue(): TransactionManagerApi {
+        fun get(): TransactionManagerApi? {
+            if(isInitialized)
+                return threadLocal.get()
             isInitialized = true
-            return getDefaultDatabaseOrFirst()?.let { registeredDatabases.getValue(it) } ?: NotInitializedTransactionManager
+            val result = getDefaultDatabaseOrFirst()?.let { registeredDatabases.getValue(it) } ?: NotInitializedTransactionManager
+            threadLocal.set(result)
+            return result
         }
 
-        override fun set(value: TransactionManagerApi?) {
+
+        fun set(value: TransactionManagerApi?) {
             isInitialized = true
-            super.set(value)
+            threadLocal.set(value)
         }
 
-        override fun remove() {
+        fun remove() {
             isInitialized = false
-            super.remove()
+            threadLocal.remove()
         }
     }
 }

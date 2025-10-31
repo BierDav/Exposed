@@ -1,5 +1,6 @@
 package org.jetbrains.exposed.v1.core.vendors
 
+import co.touchlab.stately.concurrency.ThreadLocalRef
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 
@@ -151,7 +152,7 @@ interface DatabaseDialect {
     }
 }
 
-private val explicitDialect = ThreadLocal<DatabaseDialect?>()
+private val explicitDialect = ThreadLocalRef<DatabaseDialect?>()
 
 internal fun <T> withDialect(dialect: DatabaseDialect, body: () -> T): T {
     return try {

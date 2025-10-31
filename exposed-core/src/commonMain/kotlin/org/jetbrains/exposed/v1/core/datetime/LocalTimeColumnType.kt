@@ -7,7 +7,6 @@ import org.jetbrains.exposed.v1.core.ColumnType
 import org.jetbrains.exposed.v1.core.IDateColumnType
 import org.jetbrains.exposed.v1.core.statements.api.RowApi
 import org.jetbrains.exposed.v1.core.vendors.*
-import java.sql.Timestamp
 import kotlin.time.Instant
 
 private val ORACLE_TIME_FORMAT: DateTimeFormat<LocalDateTime> by lazy {
@@ -73,32 +72,21 @@ abstract class LocalTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
         return "'${formatDefaultTime(localTime)}'"
     }
 
-    private fun localTimeValueFromDB(value: Any): LocalTime = when (value) {
-        is LocalTime -> value
-        is java.sql.Time -> value.toLocalTime().toKotlinLocalTime()
-        is Timestamp -> value.toLocalDateTime().toLocalTime().toKotlinLocalTime()
-        is Int -> longToLocalTime(value.toLong())
-        is Long -> longToLocalTime(value)
-        is String -> LocalTime.parse(value, LocalTime.Formats.ISO)
-        else -> localTimeValueFromDB(value.toString())
-    }
 
-    private fun longToLocalTime(millis: Long): LocalTime =
-        Instant.fromEpochMilliseconds(millis)
-            .toLocalDateTime(TimeZone.currentSystemDefault()).time
 
     override fun valueFromDB(value: Any): T? {
         return fromLocalTime(localTimeValueFromDB(value))
     }
 
+    @Suppress(names = ["MagicNumber"])
     override fun notNullValueToDB(value: T & Any): Any {
         val localTimeValue = toLocalTime(value)
 
         return when {
             currentDialect is SQLiteDialect -> formatDefaultTime(localTimeValue)
             currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle ->
-                Timestamp.valueOf(formatOracleTime(localTimeValue)).toInstant()
-            else -> java.sql.Time.valueOf(localTimeValue.toJavaLocalTime())
+                localTimeValue.atDate(LocalDate(1970, 1, 1)).toInstant(TimeZone.currentSystemDefault())
+            else -> localTimeValue
         }
     }
 
@@ -114,9 +102,16 @@ abstract class LocalTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
     override fun readObject(rs: RowApi, index: Int): Any? {
         val dialect = currentDialect
         return if (dialect is OracleDialect || dialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle) {
-            rs.getObject(index, Timestamp::class.java, this)
+            rs.getObject(index, Instant::class, this)
         } else {
             super.readObject(rs, index)
         }
     }
 }
+
+
+internal expect fun localTimeValueFromDB(value: Any): LocalTime
+
+internal fun longToLocalTime(millis: Long): LocalTime =
+    Instant.fromEpochMilliseconds(millis)
+        .toLocalDateTime(TimeZone.currentSystemDefault()).time

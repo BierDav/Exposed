@@ -32,7 +32,7 @@ abstract class VendorDialect(
                 }
 
                 else -> {
-                    exposedLogger.warn("Index creation with a filter condition is not supported in ${currentDialect.name}")
+                    exposedLogger.warn { "Index creation with a filter condition is not supported in ${currentDialect.name}" }
                     return null
                 }
             }
@@ -69,7 +69,7 @@ abstract class VendorDialect(
                 // returned by existingIndices() mapping String metadata to stringLiteral()
                 is LiteralOp<*> -> it.value.toString().trim('"')
                 else -> {
-                    exposedLogger.warn("Unexpected defining key field will be passed as String: $it")
+                    exposedLogger.warn { "Unexpected defining key field will be passed as String: $it" }
                     it.toString()
                 }
             }

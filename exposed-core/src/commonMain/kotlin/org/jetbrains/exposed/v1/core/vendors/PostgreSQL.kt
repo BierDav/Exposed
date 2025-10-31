@@ -4,7 +4,7 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.exceptions.throwUnsupportedException
-import java.util.*
+import kotlin.uuid.Uuid
 
 internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun byteType(): String = "SMALLINT"
@@ -16,12 +16,12 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
     override fun uuidType(): String = "uuid"
     override fun binaryType(): String = "bytea"
     override fun binaryType(length: Int): String {
-        exposedLogger.warn("The length of the binary column is not required.")
+        exposedLogger.warn { "The length of the binary column is not required." }
         return binaryType()
     }
 
     override fun blobType(): String = "bytea"
-    override fun uuidToDB(value: UUID): Any = value
+    override fun uuidToDB(value: Uuid): Any = value
     override fun dateTimeType(): String = "TIMESTAMP"
     override fun jsonBType(): String = "JSONB"
 
@@ -30,7 +30,7 @@ internal object PostgreSQLDataTypeProvider : DataTypeProvider() {
             val cast = if (e.columnType.usesBinaryFormat) "::jsonb" else "::json"
             "${super.processForDefaultValue(e)}$cast"
         }
-        e is LiteralOp<*> && e.columnType is BlobColumnType && e.columnType.useObjectIdentifier && (currentDialect as? H2Dialect) == null -> {
+        e is LiteralOp<*> && e.columnType is PlatformBlobColumnType && e.columnType.useObjectIdentifier && (currentDialect as? H2Dialect) == null -> {
             "lo_from_bytea(0, ${super.processForDefaultValue(e)} :: bytea)"
         }
         e is LiteralOp<*> && e.columnType is ArrayColumnType<*, *> -> {

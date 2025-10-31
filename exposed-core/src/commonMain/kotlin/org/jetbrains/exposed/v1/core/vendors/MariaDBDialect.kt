@@ -131,9 +131,9 @@ open class MariaDBDialect : MysqlDialect() {
 
     override fun createIndex(index: Index): String {
         if (index.functions != null) {
-            exposedLogger.warn(
+            exposedLogger.warn {
                 "Functional index on ${index.table.tableName} using ${index.functions.joinToString { it.toString() }} can't be created in MariaDB"
-            )
+            }
             return ""
         }
         return super.createIndex(index)

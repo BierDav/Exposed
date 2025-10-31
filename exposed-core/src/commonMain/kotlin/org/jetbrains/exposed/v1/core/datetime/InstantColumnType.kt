@@ -10,8 +10,6 @@ import org.jetbrains.exposed.v1.core.InternalApi
 import org.jetbrains.exposed.v1.core.statements.api.RowApi
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.core.vendors.*
-import java.sql.Timestamp
-import java.time.ZoneId
 import kotlin.time.Instant
 
 @Suppress("MagicNumber")
@@ -65,34 +63,14 @@ abstract class InstantColumnType<T> : ColumnType<T>(), IDateColumnType {
         }
     }
 
-    @Suppress("MagicNumber")
-    private fun instantValueFromDB(value: Any): Instant = when (value) {
-        is Timestamp -> Instant.fromEpochSeconds(value.time / 1000, value.nanos)
-        is String -> parseInstantFromString(value)
-        is java.time.LocalDateTime -> {
-            value.atZone(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
-                .let { Instant.fromEpochMilliseconds(it) }
-        }
-        else -> instantValueFromDB(value.toString())
-    }
 
-    private fun parseInstantFromString(value: String): Instant {
-        return try {
-            val javaInstant = java.time.Instant.parse(value)
-            Instant.fromEpochSeconds(javaInstant.epochSecond, javaInstant.nano.toLong())
-        } catch (e: java.time.format.DateTimeParseException) {
-            throw IllegalArgumentException("Failed to parse instant from string: $value", e)
-        }
-    }
 
     override fun valueFromDB(value: Any): T {
         return fromInstant(instantValueFromDB(value))
     }
 
     override fun readObject(rs: RowApi, index: Int): Any? {
-        return rs.getObject(index, Timestamp::class.java, this)
+        return rs.getObject(index, Instant::class, this)
     }
 
     override fun notNullValueToDB(value: T & Any): Any {
@@ -112,7 +90,7 @@ abstract class InstantColumnType<T> : ColumnType<T>(), IDateColumnType {
                     MYSQL_TIMESTAMP_FORMAT.format(localDateTime)
                 }
             }
-            else -> localDateTime.toSqlTimestamp()
+            else -> localDateTime
         }
     }
 
@@ -132,5 +110,17 @@ abstract class InstantColumnType<T> : ColumnType<T>(), IDateColumnType {
             }
             else -> super.nonNullValueAsDefaultString(value)
         }
+    }
+}
+
+
+internal expect fun instantValueFromDB(value: Any): Instant
+
+internal fun parseInstantFromString(value: String): Instant {
+    return try {
+        val javaInstant = java.time.Instant.parse(value)
+        Instant.fromEpochSeconds(javaInstant.epochSecond, javaInstant.nano.toLong())
+    } catch (e: java.time.format.DateTimeParseException) {
+        throw IllegalArgumentException("Failed to parse instant from string: $value", e)
     }
 }

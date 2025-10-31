@@ -10,8 +10,8 @@ import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.ops.*
 import org.jetbrains.exposed.v1.core.vendors.FunctionProvider
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
-import java.math.BigDecimal
 import kotlin.internal.LowPriorityInOverloadResolution
+import kotlin.jvm.JvmName
 import org.jetbrains.exposed.v1.core.inList as topLevelInList
 import org.jetbrains.exposed.v1.core.notInList as topLevelNotInList
 import org.jetbrains.exposed.v1.core.rem as topLevelRem
@@ -836,19 +836,19 @@ interface ISqlExpressionBuilder {
     )
     fun denseRank(): DenseRank = DenseRank()
 
-    @Deprecated(
-        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
-        replaceWith = ReplaceWith("percentRank()", "org.jetbrains.exposed.v1.core.percentRank"),
-        level = DeprecationLevel.ERROR
-    )
-    fun percentRank(): PercentRank = PercentRank()
-
-    @Deprecated(
-        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
-        replaceWith = ReplaceWith("cumeDist()", "org.jetbrains.exposed.v1.core.cumeDist"),
-        level = DeprecationLevel.ERROR
-    )
-    fun cumeDist(): CumeDist = CumeDist()
+//    @Deprecated(
+//        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
+//        replaceWith = ReplaceWith("percentRank()", "org.jetbrains.exposed.v1.core.percentRank"),
+//        level = DeprecationLevel.ERROR
+//    )
+//    fun percentRank(): PercentRank = PercentRank()
+//
+//    @Deprecated(
+//        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
+//        replaceWith = ReplaceWith("cumeDist()", "org.jetbrains.exposed.v1.core.cumeDist"),
+//        level = DeprecationLevel.ERROR
+//    )
+//    fun cumeDist(): CumeDist = CumeDist()
 
     @Deprecated(
         message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
@@ -1162,19 +1162,19 @@ interface ISqlExpressionBuilder {
     )
     @Suppress("UNCHECKED_CAST", "ComplexMethod")
     fun <T, S : T?> ExpressionWithColumnType<S>.asLiteral(value: T): LiteralOp<T> = when {
-        value is ByteArray && columnType is BasicBinaryColumnType -> stringLiteral(value.toString(Charsets.UTF_8))
+        value is ByteArray && columnType is BasicBinaryColumnType -> stringLiteral(value.decodeToString())
         columnType is ColumnWithTransform<*, *> -> (columnType as ColumnWithTransform<Any, Any>)
             .let { LiteralOp(it.originalColumnType, it.unwrapRecursive(value)) }
         else -> LiteralOp(columnType as IColumnType<T & Any>, value)
     } as LiteralOp<T>
 
-    @Deprecated(
-        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
-        replaceWith = ReplaceWith("intToDecimal()", "org.jetbrains.exposed.v1.core.intToDecimal"),
-        level = DeprecationLevel.ERROR
-    )
-    fun ExpressionWithColumnType<Int>.intToDecimal(): NoOpConversion<Int, BigDecimal> =
-        NoOpConversion(this, DecimalColumnType(precision = 15, scale = 0))
+//    @Deprecated(
+//        message = "This interface method will be removed following release 1.0.0 and should be replaced with the equivalent top-level function.",
+//        replaceWith = ReplaceWith("intToDecimal()", "org.jetbrains.exposed.v1.core.intToDecimal"),
+//        level = DeprecationLevel.ERROR
+//    )
+//    fun ExpressionWithColumnType<Int>.intToDecimal(): NoOpConversion<Int, BigDecimal> =
+//        NoOpConversion(this, DecimalColumnType(precision = 15, scale = 0))
 
     private fun <T : Any, E : EntityID<T>> Column<out E?>.idTable(): IdTable<T> =
         when (val table = this.foreignKey?.targetTable ?: this.table) {

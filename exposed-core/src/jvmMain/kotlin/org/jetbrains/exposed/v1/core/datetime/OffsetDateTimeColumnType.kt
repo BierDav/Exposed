@@ -16,7 +16,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.temporal.ChronoField
-import java.util.*
+import java.util.Locale
 
 private val SQLITE_OFFSET_DATE_TIME_FORMATTER: DateTimeFormatter by lazy {
     DateTimeFormatterBuilder()
@@ -75,7 +75,7 @@ private val MYSQL_OFFSET_DATE_TIME_AS_DEFAULT_FORMATTER: DateTimeFormatter by la
  * for applications that need to maintain timezone context across different regions.
  *
  * @param T The application-specific offset datetime type (e.g., [OffsetDateTime])
- * @see IDateColumnType
+ * @see org.jetbrains.exposed.v1.core.IDateColumnType
  * @see KotlinOffsetDateTimeColumnType
  */
 abstract class OffsetDateTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
@@ -119,8 +119,8 @@ abstract class OffsetDateTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
 
     override fun readObject(rs: RowApi, index: Int): Any? = when (currentDialect) {
         is SQLiteDialect -> super.readObject(rs, index)
-        is OracleDialect -> rs.getObject(index, ZonedDateTime::class.java, this)
-        else -> rs.getObject(index, OffsetDateTime::class.java, this)
+        is OracleDialect -> rs.getObject(index, ZonedDateTime::class, this)
+        else -> rs.getObject(index, OffsetDateTime::class, this)
     }
 
     override fun notNullValueToDB(value: T & Any): Any {

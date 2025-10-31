@@ -2,9 +2,8 @@ package org.jetbrains.exposed.v1.core.statements.api
 
 import org.jetbrains.exposed.v1.core.*
 import java.io.InputStream
-import java.math.BigDecimal
-import java.math.MathContext
 import java.util.*
+import kotlin.uuid.Uuid
 
 /** Represents a precompiled SQL statement. */
 interface PreparedStatementApi {
@@ -66,14 +65,7 @@ interface PreparedStatementApi {
         }
 
         if (type.startsWith("DECIMAL")) {
-            val specs = type.substringAfter("DECIMAL").trim('(', ')')
-                .takeUnless { it.isEmpty() }
-                ?.split(", ")
-                ?.map { it.toIntOrNull() }
-            // same default values used in exposed-core DecimalColumnType()
-            val precision = specs?.firstOrNull() ?: MathContext.DECIMAL64.precision
-            val scale = specs?.lastOrNull() ?: 20
-            return ArrayColumnType<BigDecimal, List<BigDecimal>>(DecimalColumnType(precision, scale))
+            return getDecimalColumnType(type) ?: error("Unsupported DECIMAL type $type: Only supported on JVM")
         }
 
         val dialect = org.jetbrains.exposed.v1.core.vendors.currentDialect
@@ -90,8 +82,10 @@ interface PreparedStatementApi {
             dialect.dataTypeProvider.doubleType() -> ArrayColumnType<Double, List<Double>>(DoubleColumnType())
             dialect.dataTypeProvider.binaryType() -> ArrayColumnType<ByteArray, List<ByteArray>>(BasicBinaryColumnType())
             dialect.dataTypeProvider.booleanType() -> ArrayColumnType<Boolean, List<Boolean>>(BooleanColumnType())
-            dialect.dataTypeProvider.uuidType() -> ArrayColumnType<UUID, List<UUID>>(UUIDColumnType())
+            dialect.dataTypeProvider.uuidType() -> ArrayColumnType<Uuid, List<Uuid>>(UuidColumnType())
             else -> ArrayColumnType<String, List<String>>(VarCharColumnType())
         }
     }
 }
+
+internal expect fun getDecimalColumnType(type: String): ArrayColumnType<*,*>?

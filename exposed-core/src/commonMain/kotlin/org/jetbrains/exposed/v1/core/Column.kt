@@ -211,5 +211,5 @@ class Column<T>(
 
     override fun hashCode(): Int = table.hashCode() * 31 + name.hashCode()
 
-    override fun toString(): String = "${table.javaClass.name}.$name"
+    override fun toString(): String = "${table::class.qualifiedName}.$name"
 }

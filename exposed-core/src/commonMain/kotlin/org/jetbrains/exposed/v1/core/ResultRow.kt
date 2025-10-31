@@ -75,10 +75,12 @@ class ResultRow(
 
         if (checkNullability) {
             if (rawValue == null && expression is Column<*> && expression.dbDefaultValue != null && !expression.columnType.nullable) {
-                exposedLogger.warn(
-                    "Column ${CoreTransactionManager.currentTransaction().fullIdentity(expression)} is marked as not null, " +
-                        "has default db value, but returns null. Possible have to re-read it from DB."
-                )
+                exposedLogger.warn {
+                    "Column ${
+                        CoreTransactionManager.currentTransaction().fullIdentity(expression)
+                    } is marked as not null, " +
+                            "has default db value, but returns null. Possible have to re-read it from DB."
+                }
             }
         }
 

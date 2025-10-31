@@ -1,11 +1,11 @@
 package org.jetbrains.exposed.v1.core
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.statements.StatementContext
 import org.jetbrains.exposed.v1.core.statements.StatementInterceptor
 import org.jetbrains.exposed.v1.core.statements.api.PreparedStatementApi
 import org.jetbrains.exposed.v1.core.statements.expandArgs
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
-import org.slf4j.LoggerFactory
 
 /** Base class representing a provider of log messages. */
 interface SqlLogger {
@@ -14,7 +14,7 @@ interface SqlLogger {
 }
 
 /** Returns a [org.slf4j.Logger] named specifically for Exposed log messages.  */
-val exposedLogger = LoggerFactory.getLogger("Exposed")!!
+val exposedLogger = KotlinLogging.logger("Exposed")
 
 /** Class representing a provider of log messages sent to standard output stream. */
 object StdOutSqlLogger : SqlLogger {

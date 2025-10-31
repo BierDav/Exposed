@@ -644,7 +644,7 @@ abstract class FunctionProvider {
 
     internal fun Join.checkJoinTypes(statementType: StatementType) {
         if (joinParts.any { it.joinType != JoinType.INNER }) {
-            exposedLogger.warn("All tables in ${statementType.name} statement will be joined using inner join by default")
+            exposedLogger.warn { "All tables in ${statementType.name} statement will be joined using inner join by default" }
         }
     }
 

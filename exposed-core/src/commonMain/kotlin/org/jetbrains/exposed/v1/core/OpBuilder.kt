@@ -10,8 +10,8 @@ import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.ops.*
 import org.jetbrains.exposed.v1.core.vendors.FunctionProvider
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
-import java.math.BigDecimal
 import kotlin.internal.LowPriorityInOverloadResolution
+import kotlin.jvm.JvmName
 
 // Logical Operators
 
@@ -638,12 +638,6 @@ infix fun <T> Expression<T>.greaterSubQuery(query: AbstractQuery<*>): GreaterSub
 
 /** Checks if this expression is greater than or equal to the single value returned from [query]. */
 infix fun <T> Expression<T>.greaterEqSubQuery(query: AbstractQuery<*>): GreaterEqSubQueryOp<T> = GreaterEqSubQueryOp(this, query)
-
-// Value Operators
-
-/** Changes this integer expression to a [BigDecimal] type. */
-fun ExpressionWithColumnType<Int>.intToDecimal(): NoOpConversion<Int, BigDecimal> =
-    NoOpConversion(this, DecimalColumnType(precision = 15, scale = 0))
 
 // Array/List/Table Comparisons
 

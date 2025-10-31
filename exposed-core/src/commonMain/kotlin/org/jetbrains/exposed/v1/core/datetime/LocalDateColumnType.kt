@@ -15,8 +15,6 @@ import org.jetbrains.exposed.v1.core.vendors.PostgreSQLDialect
 import org.jetbrains.exposed.v1.core.vendors.SQLiteDialect
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
 import org.jetbrains.exposed.v1.core.vendors.h2Mode
-import java.sql.Date
-import java.sql.Timestamp
 import kotlin.time.Instant
 
 private fun formatDate(instant: Instant, timeZone: TimeZone): String {
@@ -59,24 +57,13 @@ abstract class LocalDateColumnType<T> : ColumnType<T>(), IDateColumnType {
         }
     }
 
-    private fun localDateValueFromDB(value: Any): LocalDate = when (value) {
-        is LocalDate -> value
-        is Date -> longToLocalDate(value.time)
-        is Timestamp -> longToLocalDate(value.time)
-        is Int -> longToLocalDate(value.toLong())
-        is Long -> longToLocalDate(value)
-        is String -> LocalDate.parse(value)
-        else -> LocalDate.parse(value.toString())
-    }
+
 
     override fun valueFromDB(value: Any): T? {
         return fromLocalDate(localDateValueFromDB(value))
     }
 
-    private fun longToLocalDate(epochMillis: Long): LocalDate {
-        val instant = Instant.fromEpochMilliseconds(epochMillis)
-        return instant.toLocalDateTime(TimeZone.currentSystemDefault()).date
-    }
+
 
     override fun notNullValueToDB(value: T & Any): Any {
         val localDate = toLocalDate(value)
@@ -84,7 +71,7 @@ abstract class LocalDateColumnType<T> : ColumnType<T>(), IDateColumnType {
 
         return when {
             currentDialect is SQLiteDialect -> formatDate(instant, TimeZone.currentSystemDefault())
-            else -> Date(instant.toEpochMilliseconds())
+            else -> localDate
         }
     }
 
@@ -98,7 +85,7 @@ abstract class LocalDateColumnType<T> : ColumnType<T>(), IDateColumnType {
     override fun readObject(rs: RowApi, index: Int): Any? {
         val dialect = currentDialect
         return if (dialect is OracleDialect || dialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle) {
-            rs.getObject(index, Timestamp::class.java, this)
+            rs.getObject(index, Instant::class, this)
         } else {
             super.readObject(rs, index)
         }
@@ -107,4 +94,12 @@ abstract class LocalDateColumnType<T> : ColumnType<T>(), IDateColumnType {
 
 private fun LocalDate.atStartOfDayIn(timeZone: TimeZone): Instant {
     return this.atTime(LocalTime(0, 0, 0)).toInstant(timeZone)
+}
+
+
+internal expect fun localDateValueFromDB(value: Any): LocalDate
+
+internal fun longToLocalDate(epochMillis: Long): LocalDate {
+    val instant = Instant.fromEpochMilliseconds(epochMillis)
+    return instant.toLocalDateTime(TimeZone.currentSystemDefault()).date
 }

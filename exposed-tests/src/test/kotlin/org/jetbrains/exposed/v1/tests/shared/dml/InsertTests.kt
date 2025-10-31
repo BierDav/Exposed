@@ -756,7 +756,7 @@ class InsertTests : DatabaseTestsBase() {
 
     @Test
     fun testDatabaseGeneratedUUIDasPrimaryKey() {
-        val randomPGUUID = object : CustomFunction<UUID>("gen_random_uuid", UUIDColumnType()) {}
+        val randomPGUUID = object : CustomFunction<UUID>("gen_random_uuid", UuidColumnType()) {}
 
         val tester = object : IdTable<UUID>("testTestTest") {
             override val id = uuid("id").defaultExpression(randomPGUUID).entityId()

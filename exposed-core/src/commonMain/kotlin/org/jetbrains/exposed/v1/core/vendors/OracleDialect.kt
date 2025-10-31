@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.core.statements.MergeStatement.ClauseAction.UPDA
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.exceptions.throwUnsupportedException
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Suppress("TooManyFunctions")
 internal object OracleDataTypeProvider : DataTypeProvider() {
@@ -67,7 +67,7 @@ internal object OracleDataTypeProvider : DataTypeProvider() {
         }
     }
 
-    override fun uuidToDB(value: UUID): Any {
+    override fun uuidToDB(value: Uuid): Any {
         return if ((currentDialect as? H2Dialect)?.h2Mode == H2Dialect.H2CompatibilityMode.Oracle) {
             H2DataTypeProvider.uuidToDB(value)
         } else {

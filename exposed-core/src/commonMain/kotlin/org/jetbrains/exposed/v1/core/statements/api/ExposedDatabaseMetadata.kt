@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.core.vendors.H2Dialect
 import org.jetbrains.exposed.v1.core.vendors.H2Dialect.H2CompatibilityMode
 import org.jetbrains.exposed.v1.core.vendors.currentDialect
 import org.jetbrains.exposed.v1.core.vendors.h2Mode
-import java.sql.Types
 
 /**
  * Base class responsible for shared utility methods needed for retrieving and storing information about
@@ -47,10 +46,10 @@ abstract class ExposedDatabaseMetadata(val database: String) {
         val columnMetadataSqlType = columnMetadataSqlType.uppercase()
         val columnType = columnType.uppercase()
 
-        if (columnMetadataJdbcType == Types.ARRAY) {
+        if (columnMetadataJdbcType == ColumnTypes.ARRAY) {
             val baseType = columnMetadataSqlType.substringBefore(" ARRAY")
-            return areEquivalentColumnTypes(baseType, Types.OTHER, columnType.substringBefore(" ARRAY")) &&
-                areEquivalentColumnTypes(columnMetadataSqlType.replaceBefore("ARRAY", ""), Types.OTHER, columnType.replaceBefore("ARRAY", ""))
+            return areEquivalentColumnTypes(baseType, ColumnTypes.OTHER, columnType.substringBefore(" ARRAY")) &&
+                areEquivalentColumnTypes(columnMetadataSqlType.replaceBefore("ARRAY", ""), ColumnTypes.OTHER, columnType.replaceBefore("ARRAY", ""))
         }
 
         if (columnType == "TEXT" && columnMetadataSqlType == "VARCHAR") {

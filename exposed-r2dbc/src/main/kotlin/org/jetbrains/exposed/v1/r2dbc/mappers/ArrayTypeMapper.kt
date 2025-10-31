@@ -114,7 +114,7 @@ class ArrayTypeMapper : TypeMapper {
             columnType.delegate is BinaryColumnType -> (mappedList as List<ByteArray>).toTypedArray()
             columnType.delegate is TextColumnType -> (mappedList as List<String>).toTypedArray()
             columnType.delegate is DecimalColumnType -> (mappedList as List<java.math.BigDecimal>).toTypedArray()
-            columnType.delegate is UUIDColumnType -> (mappedList as List<java.util.UUID>).toTypedArray()
+            columnType.delegate is UuidColumnType -> (mappedList as List<java.util.UUID>).toTypedArray()
             columnType.delegate is IDateColumnType -> {
                 // For date/time types, we need to handle them specially
                 // The hasTimePart property tells us whether it's a DATE or DATETIME column
@@ -212,7 +212,7 @@ private fun ArrayColumnType<*, *>.arrayDeclaration(): Class<out Array<out Any>> 
     is DoubleColumnType -> Array<Double>::class.java
     is DecimalColumnType -> Array<java.math.BigDecimal>::class.java
     is BasicBinaryColumnType, is BlobColumnType -> Array<ByteArray>::class.java
-    is UUIDColumnType -> Array<java.util.UUID>::class.java
+    is UuidColumnType -> Array<java.util.UUID>::class.java
     is CharacterColumnType -> Array<Char>::class.java
     is BooleanColumnType -> Array<Boolean>::class.java
     is IDateColumnType -> {

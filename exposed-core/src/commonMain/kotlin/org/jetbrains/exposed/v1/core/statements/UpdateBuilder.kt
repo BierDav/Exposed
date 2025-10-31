@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.core.dao.id.CompositeID
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import kotlin.internal.LowPriorityInOverloadResolution
+import kotlin.jvm.JvmName
 
 /**
  * Represents the underlying mapping of columns scheduled for change along with their new values.

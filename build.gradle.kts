@@ -39,6 +39,7 @@ dependencies {
 repositories {
     mavenLocal()
     mavenCentral()
+    google()
 }
 
 allprojects {

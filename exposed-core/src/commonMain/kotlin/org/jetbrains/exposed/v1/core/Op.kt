@@ -2,7 +2,6 @@ package org.jetbrains.exposed.v1.core
 
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.vendors.*
-import java.math.BigDecimal
 
 /**
  * Represents an SQL operator.
@@ -276,25 +275,12 @@ class TimesOp<T, S : T>(
  */
 class DivideOp<T, S : T>(
     /** The left-hand side operand. */
-    private val dividend: Expression<T>,
+    internal val dividend: Expression<T>,
     /** The right-hand side operand. */
-    private val divisor: Expression<S>,
+    internal val divisor: Expression<S>,
     /** The column type of this expression. */
     columnType: IColumnType<T & Any>
-) : CustomOperator<T>("/", columnType, dividend, divisor) {
-    companion object {
-        fun <T : BigDecimal?, S : T> DivideOp<T, S>.withScale(scale: Int): DivideOp<T, S> {
-            val precision = (columnType as DecimalColumnType).precision + scale
-            val decimalColumnType = DecimalColumnType(precision, scale)
-
-            val newExpression = (dividend as? LiteralOp<BigDecimal>)?.value?.takeIf { it.scale() == 0 }?.let {
-                decimalLiteral(it.setScale(1)) // it is needed to treat dividend as decimal instead of integer in SQL
-            } ?: dividend
-
-            return DivideOp(newExpression as Expression<T>, divisor, decimalColumnType as IColumnType<T & Any>)
-        }
-    }
-}
+) : CustomOperator<T>("/", columnType, dividend, divisor)
 
 /**
  * Represents an SQL operator that calculates the remainder of dividing [expr1] by [expr2].

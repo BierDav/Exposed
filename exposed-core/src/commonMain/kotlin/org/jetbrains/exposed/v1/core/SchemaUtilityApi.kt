@@ -1,7 +1,7 @@
 package org.jetbrains.exposed.v1.core
 
 import org.jetbrains.exposed.v1.core.vendors.*
-import java.math.BigDecimal
+import kotlin.time.Clock
 
 /**
  * Base class representing helper functions necessary for creating, altering, and dropping database schema objects.
@@ -142,18 +142,18 @@ abstract class SchemaUtilityApi {
         if (excessiveIndices.isEmpty()) return emptyList()
         val toDrop = HashSet<Index>()
         if (withLogs) {
-            exposedLogger.warn("List of excessive indices:")
+            exposedLogger.warn { "List of excessive indices:" }
             excessiveIndices.forEach { (triple, indices) ->
                 val indexNames = indices.joinToString(", ") { index -> index.indexName }
-                exposedLogger.warn("\t\t\t'${triple.first.tableName}'.'${triple.third}' -> $indexNames")
+                exposedLogger.warn { "\t\t\t'${triple.first.tableName}'.'${triple.third}' -> $indexNames" }
             }
-            exposedLogger.info("SQL Queries to remove excessive indices:")
+            exposedLogger.info { "SQL Queries to remove excessive indices:" }
         }
         excessiveIndices.forEach { (_, indices) ->
             indices.take(indices.size - 1).forEach { index ->
                 toDrop.add(index)
                 if (withLogs) {
-                    exposedLogger.info("\t\t\t${index.dropStatement()};")
+                    exposedLogger.info { "\t\t\t${index.dropStatement()};" }
                 }
             }
         }
@@ -173,21 +173,21 @@ abstract class SchemaUtilityApi {
         if (excessiveConstraints.isEmpty()) return emptyList()
         val toDrop = HashSet<ForeignKeyConstraint>()
         if (withLogs) {
-            exposedLogger.warn("List of excessive foreign key constraints:")
-            excessiveConstraints.forEach { (table, columns), fkConstraints ->
-                val constraint = fkConstraints.first()
-                val fkPartToLog = fkConstraints.joinToString(", ") { fkConstraint -> fkConstraint.fkName }
-                exposedLogger.warn(
+            exposedLogger.warn { "List of excessive foreign key constraints:" }
+            excessiveConstraints.forEach { (table, columns) ->
+                val constraint = columns.first()
+                val fkPartToLog = columns.joinToString(", ") { fkConstraint -> fkConstraint.fkName }
+                exposedLogger.warn {
                     "\t\t\t'$table'.'$columns' -> '${constraint.fromTableName}':\t$fkPartToLog"
-                )
+                }
             }
-            exposedLogger.info("SQL Queries to remove excessive keys:")
+            exposedLogger.info { "SQL Queries to remove excessive keys:" }
         }
         excessiveConstraints.forEach { (_, fkConstraints) ->
             fkConstraints.take(fkConstraints.size - 1).forEach { fkConstraint ->
                 toDrop.add(fkConstraint)
                 if (withLogs) {
-                    exposedLogger.info("\t\t\t${fkConstraint.dropStatement()};")
+                    exposedLogger.info { "\t\t\t${fkConstraint.dropStatement()};" }
                 }
             }
         }
@@ -237,10 +237,10 @@ abstract class SchemaUtilityApi {
             for (index in existingTableIndices) {
                 val mappedIndex = mappedIndices.firstOrNull { it.onlyNameDiffer(index) } ?: continue
                 if (withLogs) {
-                    exposedLogger.info(
+                    exposedLogger.info {
                         "Index on table '${table.tableName}' differs only in name: in db ${index.indexName} " +
-                            "-> in mapping ${mappedIndex.indexName}"
-                    )
+                                            "-> in mapping ${mappedIndex.indexName}"
+                    }
                 }
                 nameDiffers.add(index)
                 nameDiffers.add(mappedIndex)
@@ -272,7 +272,7 @@ abstract class SchemaUtilityApi {
     @InternalApi
     protected fun <T> Collection<T>.log(mainMessage: String, withLogs: Boolean) {
         if (withLogs && isNotEmpty()) {
-            exposedLogger.warn(joinToString(prefix = "$mainMessage\n\t\t", separator = "\n\t\t"))
+            exposedLogger.warn { joinToString(prefix = "$mainMessage\n\t\t", separator = "\n\t\t") }
         }
     }
 
@@ -368,155 +368,9 @@ abstract class SchemaUtilityApi {
         }
     }
 
-    @Suppress("NestedBlockDepth", "ComplexMethod", "LongMethod")
-    private fun DatabaseDialect.dbDefaultToString(column: Column<*>, exp: Expression<*>): String {
-        return when (exp) {
-            is LiteralOp<*> -> {
-                when (val value = exp.value) {
-                    is Boolean -> when (this) {
-                        is MysqlDialect -> if (value) "1" else "0"
-                        is PostgreSQLDialect -> value.toString()
-                        else -> dataTypeProvider.booleanToStatementString(value)
-                    }
-                    is String -> when {
-                        this is PostgreSQLDialect -> when (column.columnType) {
-                            is VarCharColumnType -> "'$value'::character varying"
-                            is TextColumnType -> "'$value'::text"
-                            else -> dataTypeProvider.processForDefaultValue(exp)
-                        }
-                        this is OracleDialect || h2Mode == H2Dialect.H2CompatibilityMode.Oracle -> when {
-                            column.columnType is VarCharColumnType && value == "" -> "NULL"
-                            column.columnType is TextColumnType && value == "" -> "NULL"
-                            else -> value
-                        }
-                        else -> value
-                    }
-                    is Enum<*> -> when (exp.columnType) {
-                        is EnumerationNameColumnType<*> -> when (this) {
-                            is PostgreSQLDialect -> "'${value.name}'::character varying"
-                            else -> value.name
-                        }
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is BigDecimal -> when (this) {
-                        is MysqlDialect -> value.setScale((exp.columnType as DecimalColumnType).scale).toString()
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is Byte -> when {
-                        this is PostgreSQLDialect && value < 0 -> "'${dataTypeProvider.processForDefaultValue(exp)}'::integer"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is Short -> when {
-                        this is PostgreSQLDialect && value < 0 -> "'${dataTypeProvider.processForDefaultValue(exp)}'::integer"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is Int -> when {
-                        this is PostgreSQLDialect && value < 0 -> "'${dataTypeProvider.processForDefaultValue(exp)}'::integer"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is Long -> when {
-                        this is SQLServerDialect && (value < 0 || value > Int.MAX_VALUE.toLong()) ->
-                            "${dataTypeProvider.processForDefaultValue(exp)}."
-                        this is PostgreSQLDialect && (value < 0 || value > Int.MAX_VALUE.toLong()) ->
-                            "'${dataTypeProvider.processForDefaultValue(exp)}'::bigint"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is UInt -> when {
-                        this is SQLServerDialect && value > Int.MAX_VALUE.toUInt() -> "${dataTypeProvider.processForDefaultValue(exp)}."
-                        this is PostgreSQLDialect && value > Int.MAX_VALUE.toUInt() -> "'${dataTypeProvider.processForDefaultValue(exp)}'::bigint"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    is ULong -> when {
-                        this is SQLServerDialect && value > Int.MAX_VALUE.toULong() -> "${dataTypeProvider.processForDefaultValue(exp)}."
-                        this is PostgreSQLDialect && value > Int.MAX_VALUE.toULong() -> "'${dataTypeProvider.processForDefaultValue(exp)}'::bigint"
-                        else -> dataTypeProvider.processForDefaultValue(exp)
-                    }
-                    else -> {
-                        when {
-                            column.columnType is JsonColumnMarker -> {
-                                val processed = dataTypeProvider.processForDefaultValue(exp)
-                                when (this) {
-                                    is PostgreSQLDialect -> {
-                                        if (column.columnType.usesBinaryFormat) {
-                                            processed.replace(Regex("(\"|})(:|,)(\\[|\\{|\")"), "$1$2 $3")
-                                        } else {
-                                            processed
-                                        }
-                                    }
-                                    is MariaDBDialect -> processed.trim('\'')
-                                    is MysqlDialect -> "_utf8mb4\\'${processed.trim('(', ')', '\'')}\\'"
-                                    else -> when {
-                                        processed.startsWith('\'') && processed.endsWith('\'') -> processed.trim('\'')
-                                        else -> processed
-                                    }
-                                }
-                            }
-                            column.columnType is ArrayColumnType<*, *> && this is PostgreSQLDialect -> {
-                                (value as List<*>)
-                                    .takeIf { it.isNotEmpty() }
-                                    ?.run {
-                                        val delegateColumnType = column.columnType.delegate as IColumnType<Any>
-                                        val delegateColumn = (column as Column<Any?>).withColumnType(delegateColumnType)
-                                        val processed = map {
-                                            if (delegateColumn.columnType is StringColumnType) {
-                                                "'$it'::text"
-                                            } else {
-                                                dbDefaultToString(delegateColumn, delegateColumn.asLiteral(it))
-                                            }
-                                        }
-                                        "ARRAY$processed"
-                                    } ?: dataTypeProvider.processForDefaultValue(exp)
-                            }
-                            column.columnType is IDateColumnType -> {
-                                val processed = dataTypeProvider.processForDefaultValue(exp)
-                                if (processed.startsWith('\'') && processed.endsWith('\'')) {
-                                    processed.trim('\'')
-                                } else {
-                                    processed
-                                }
-                            }
-                            else -> dataTypeProvider.processForDefaultValue(exp)
-                        }
-                    }
-                }
-            }
-            is Function<*> -> {
-                var processed = dataTypeProvider.processForDefaultValue(exp)
-                if (exp.columnType is IDateColumnType) {
-                    if (processed.startsWith("CURRENT_TIMESTAMP") || processed == "GETDATE()") {
-                        when (this) {
-                            is SQLServerDialect -> processed = "getdate"
-                            is MariaDBDialect -> processed = processed.lowercase()
-                        }
-                    }
-                    if (processed.trim('(').startsWith("CURRENT_DATE")) {
-                        when (this) {
-                            is MysqlDialect -> processed = "curdate()"
-                        }
-                    }
-                }
-                processed
-            }
-            else -> dataTypeProvider.processForDefaultValue(exp)
-        }
-    }
 
-    private fun isIncorrectSizeOrScale(columnMeta: ColumnMetadata, columnType: IColumnType<*>): Boolean {
-        // ColumnMetadata.scale can only be non-null if ColumnMetadata.size is non-null
-        if (columnMeta.size == null) return false
-        val dialect = currentDialect
-        return when (columnType) {
-            is DecimalColumnType -> columnType.precision != columnMeta.size || columnType.scale != columnMeta.scale
-            is CharColumnType -> columnType.colLength != columnMeta.size
-            is VarCharColumnType -> columnType.colLength != columnMeta.size
-            is BinaryColumnType -> if (dialect is PostgreSQLDialect || dialect.h2Mode == H2Dialect.H2CompatibilityMode.PostgreSQL) {
-                false
-            } else {
-                columnType.length != columnMeta.size
-            }
-            else -> false
-        }
-    }
+
+
 
     private fun Table.primaryKeyDdl(missingColumns: List<Column<*>>, existingKey: PrimaryKeyMetadata?): String? {
         val missingPK = primaryKey?.takeIf { pk ->
@@ -534,15 +388,22 @@ abstract class SchemaUtilityApi {
     @InternalApi
     protected inline fun <R> logTimeSpent(message: String, withLogs: Boolean, block: () -> R): R {
         return if (withLogs) {
-            val start = System.currentTimeMillis()
+            val start = Clock.System.now()
             val answer = block()
-            exposedLogger.info(message + " took " + (System.currentTimeMillis() - start) + "ms")
+            exposedLogger.info { message + " took " + (Clock.System.now() - start).inWholeMilliseconds + "ms" }
             answer
         } else {
             block()
         }
     }
 }
+
+@Suppress("NestedBlockDepth", "ComplexMethod", "LongMethod")
+internal expect fun DatabaseDialect.dbDefaultToString(column: Column<*>, exp: Expression<*>): String
+
+internal expect fun SchemaUtilityApi.isIncorrectSizeOrScale(columnMeta: ColumnMetadata, columnType: IColumnType<*>): Boolean
+
+
 
 /**
  * Utility functions that assist with creating, altering, and dropping table objects.

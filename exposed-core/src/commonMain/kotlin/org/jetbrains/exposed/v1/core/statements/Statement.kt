@@ -4,7 +4,6 @@ import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.Transaction
 import org.jetbrains.exposed.v1.core.statements.api.ResultApi
-import java.util.*
 
 internal object DefaultValueMarker {
     override fun toString(): String = "DEFAULT"
@@ -46,7 +45,7 @@ fun StatementContext.expandArgs(transaction: Transaction): String {
     if (!iterator.hasNext()) return sql
 
     return buildString {
-        val quoteStack = Stack<Char>()
+        val quoteStack = ArrayDeque<Char>()
         var lastPos = 0
 
         var i = -1
@@ -65,9 +64,9 @@ fun StatementContext.expandArgs(transaction: Transaction): String {
                 }
                 char == '\'' || char == '\"' -> {
                     when {
-                        quoteStack.isEmpty() -> quoteStack.push(char)
-                        quoteStack.peek() == char -> quoteStack.pop()
-                        else -> quoteStack.push(char)
+                        quoteStack.isEmpty() -> quoteStack.addLast(char)
+                        quoteStack.first() == char -> quoteStack.removeFirst()
+                        else -> quoteStack.addLast(char)
                     }
                 }
             }

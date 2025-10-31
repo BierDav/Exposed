@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.core.statements.MergeStatement.ClauseAction.UPDA
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.exceptions.throwUnsupportedException
-import java.util.*
+import kotlin.uuid.Uuid
 
 internal object SQLServerDataTypeProvider : DataTypeProvider() {
     override fun byteType(): String = if (currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.SQLServer) {
@@ -35,7 +35,7 @@ internal object SQLServerDataTypeProvider : DataTypeProvider() {
 
     override fun blobType(): String = "VARBINARY(MAX)"
     override fun uuidType(): String = "uniqueidentifier"
-    override fun uuidToDB(value: UUID): Any = value.toString()
+    override fun uuidToDB(value: Uuid): Any = value.toString()
     override fun dateTimeType(): String = "DATETIME2"
     override fun timestampWithTimeZoneType(): String =
         if (currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.SQLServer) {
@@ -446,9 +446,9 @@ open class SQLServerDialect : VendorDialect(dialectName, SQLServerDataTypeProvid
 
     override fun createIndex(index: Index): String {
         if (index.functions != null) {
-            exposedLogger.warn(
+            exposedLogger.warn {
                 "Functional index on ${index.table.tableName} using ${index.functions.joinToString { it.toString() }} can't be created in SQLServer"
-            )
+            }
             return ""
         }
         return super.createIndex(index)

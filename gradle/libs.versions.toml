@@ -37,11 +37,15 @@ spring-security-crypto = "6.2.1"
 joda-time = "2.14.0"
 junit = "4.13.2"
 kotlinx-datetime = "0.7.1-0.6.x-compat"
+kotlinx-io = "0.8.0"
+kotlinx-atomicfu = "0.29.0"
 javax-money = "1.1"
 moneta = "1.4.5"
 hikariCP = "4.0.3"
 logcaptor = "2.12.1"
 maven-publish = "0.34.0"
+stately-concurrent-collections = "2.1.0"
+kotlin-logging = "7.0.13"
 
 [libraries]
 jvm = { group = "org.jetbrains.kotlin.jvm", name = "org.jetbrains.kotlin.jvm.gradle.plugin", version.ref = "kotlin" }
@@ -53,8 +57,11 @@ kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutin
 kotlinx-coroutines-debug = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-debug", version.ref = "kotlinCoroutines" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinCoroutines" }
 kotlinx-coroutines-reactive = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-reactive", version.ref = "kotlinCoroutines" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-jvm-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime-jvm", version.ref = "kotlinx-datetime" }
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
+
 
 slf4j = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 spring-security-crypto = { group = "org.springframework.security", name = "spring-security-crypto", version.ref = "spring-security-crypto" }
@@ -101,6 +108,9 @@ r2dbc-sqlserver = { group = "io.r2dbc", name = "r2dbc-mssql", version.ref = "sql
 
 logcaptor = { group = "io.github.hakky54", name = "logcaptor", version.ref = "logcaptor" }
 
+stately-concurrent-collections = { group = "co.touchlab", name = "stately-concurrent-collections", version.ref = "stately-concurrent-collections"}
+kotlin-logging = { group = "io.github.oshai", name = "kotlin-logging", version.ref = "kotlin-logging"}
+
 [plugins]
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -109,3 +119,4 @@ serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref 
 binary-compatibility-validator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compatibility-validator" }
 docker-compose = { id = "com.avast.gradle.docker-compose", version.ref = "docker-compose" }
 maven-publish = { id = "com.vanniktech.maven.publish" }
+kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "kotlinx-atomicfu" }

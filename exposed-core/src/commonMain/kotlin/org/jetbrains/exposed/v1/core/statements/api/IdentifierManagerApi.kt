@@ -156,7 +156,5 @@ abstract class IdentifierManagerApi {
     private fun quote(identity: String) = quotedIdentifiersCache.getOrPut(identity) { "$quoteString$identity$quoteString".trim() }
 }
 
-private class IdentifiersCache<V : Any>(initialCapacity: Int = 100, private val cacheSize: Int = 1000) :
-    java.util.LinkedHashMap<String, V>(initialCapacity) {
-    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, V>?): Boolean = size >= cacheSize
-}
+private class IdentifiersCache<V : Any>(initialCapacity: Int = 100) :
+    MutableMap<String, V> by LinkedHashMap(initialCapacity)

@@ -2,46 +2,21 @@
 
 package org.jetbrains.exposed.v1.exceptions
 
-import org.jetbrains.exposed.v1.core.AbstractQuery
-import org.jetbrains.exposed.v1.core.QueryBuilder
 import org.jetbrains.exposed.v1.core.Transaction
 import org.jetbrains.exposed.v1.core.statements.StatementContext
-import org.jetbrains.exposed.v1.core.statements.expandArgs
 import org.jetbrains.exposed.v1.core.vendors.DatabaseDialect
-import java.sql.SQLException
 
 /**
  * An exception that provides information about a database access error,
  * within the [contexts] of the executed statements that caused the exception.
  */
-class ExposedSQLException(
+expect class ExposedSQLException(
     cause: Throwable?,
-    val contexts: List<StatementContext>,
-    private val transaction: Transaction
-) : SQLException(cause) {
-    fun causedByQueries(): List<String> = contexts.map {
-        try {
-            if (transaction.debug) {
-                it.expandArgs(transaction)
-            } else {
-                it.sql(transaction)
-            }
-        } catch (_: Throwable) {
-            try {
-                (it.statement as? AbstractQuery<*>)?.prepareSQL(QueryBuilder(!transaction.debug))
-            } catch (_: Throwable) {
-                null
-            } ?: "Failed on expanding args for ${it.statement.type}: ${it.statement}"
-        }
-    }
-
-    private val originalSQLException = cause as? SQLException
-
-    override fun getSQLState(): String = originalSQLException?.sqlState.orEmpty()
-
-    override fun getErrorCode(): Int = originalSQLException?.errorCode ?: 0
-
-    override fun toString() = "${super.toString()}\nSQL: ${causedByQueries()}"
+    contexts: List<StatementContext>,
+    transaction: Transaction
+) {
+    val contexts: List<StatementContext>
+    val transaction: Transaction
 }
 
 /**
@@ -60,7 +35,7 @@ class UnsupportedByDialectException(baseMessage: String, val dialect: DatabaseDi
  *
  * @param columnName the duplicated column name
  */
-class DuplicateColumnException(columnName: String, tableName: String) : ExceptionInInitializerError(
+class DuplicateColumnException(columnName: String, tableName: String) : Exception(
     "Duplicate column name \"$columnName\" in table \"$tableName\""
 )
 

@@ -2,17 +2,17 @@ package org.jetbrains.exposed.v1.core.vendors
 
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.statements.StatementType
+import org.jetbrains.exposed.v1.core.statements.api.ColumnTypes
 import org.jetbrains.exposed.v1.core.transactions.CoreTransactionManager
 import org.jetbrains.exposed.v1.exceptions.throwUnsupportedException
-import java.sql.Types
-import java.util.*
+import kotlin.uuid.Uuid
 
 internal object H2DataTypeProvider : DataTypeProvider() {
     override fun binaryType(): String = "VARBINARY"
 
     override fun uuidType(): String = "UUID"
 
-    override fun uuidToDB(value: UUID): Any = value
+    override fun uuidToDB(value: Uuid): Any = value
 
     override fun dateTimeType(): String = "DATETIME(9)"
 
@@ -334,19 +334,19 @@ open class H2Dialect : VendorDialect(dialectName, H2DataTypeProvider, H2Function
             h2Mode == H2CompatibilityMode.Oracle &&
             index.columns.any { it.columnType is TextColumnType }
         ) {
-            exposedLogger.warn("Index on ${index.table.tableName} for ${index.columns.joinToString { it.name }} can't be created on CLOB in H2")
+            exposedLogger.warn { "Index on ${index.table.tableName} for ${index.columns.joinToString { it.name }} can't be created on CLOB in H2" }
             return ""
         }
         if (index.indexType != null) {
-            exposedLogger.warn(
+            exposedLogger.warn {
                 "Index of type ${index.indexType} on ${index.table.tableName} for ${index.columns.joinToString { it.name }} can't be created in H2"
-            )
+            }
             return ""
         }
         if (index.functions != null) {
-            exposedLogger.warn(
+            exposedLogger.warn {
                 "Functional index on ${index.table.tableName} using ${index.functions.joinToString { it.toString() }} can't be created in H2"
-            )
+            }
             return ""
         }
         return super.createIndex(index)
@@ -376,10 +376,10 @@ open class H2Dialect : VendorDialect(dialectName, H2DataTypeProvider, H2Function
         val columnMetadataSqlType = columnMetadataSqlType.uppercase()
         val columnType = columnType.uppercase()
 
-        if (columnMetadataJdbcType == Types.ARRAY) {
+        if (columnMetadataJdbcType == ColumnTypes.ARRAY) {
             val baseType = columnMetadataSqlType.substringBefore(" ARRAY")
-            return areEquivalentColumnTypes(baseType, Types.OTHER, columnType.substringBefore(" ARRAY")) &&
-                areEquivalentColumnTypes(columnMetadataSqlType.replaceBefore("ARRAY", ""), Types.OTHER, columnType.replaceBefore("ARRAY", ""))
+            return areEquivalentColumnTypes(baseType, ColumnTypes.OTHER, columnType.substringBefore(" ARRAY")) &&
+                areEquivalentColumnTypes(columnMetadataSqlType.replaceBefore("ARRAY", ""), ColumnTypes.OTHER, columnType.replaceBefore("ARRAY", ""))
         }
 
         if (columnType == "TEXT" && columnMetadataSqlType == "VARCHAR") {

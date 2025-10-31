@@ -77,49 +77,13 @@ abstract class LocalDateTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
         }
     }
 
-    @Suppress("MagicNumber")
-    private fun localDateTimeValueFromDB(value: Any): LocalDateTime? = when (value) {
-        is LocalDateTime -> value
-        is java.sql.Date -> longToLocalDateTime(value.time)
-        is java.sql.Timestamp -> longToLocalDateTime(value.time / 1000, value.nanos.toLong())
-        is Int -> longToLocalDateTime(value.toLong())
-        is Long -> longToLocalDateTime(value)
-        is String -> parseLocalDateTime(value)
-        is java.time.OffsetDateTime -> {
-            // It looks like there is no direct coversion between OffsetDateTime and anything from kotlin datetime modules,
-            //  so here conversion happens via java.time.Instant
-            value.toInstant()
-                .toKotlinInstant()
-                .toLocalDateTime(TimeZone.currentSystemDefault())
-        }
 
-        else -> localDateTimeValueFromDB(value.toString())
-    }
 
     override fun valueFromDB(value: Any): T? {
         return localDateTimeValueFromDB(value)?.let { fromLocalDateTime(it) }
     }
 
-    private fun longToLocalDateTime(millis: Long): LocalDateTime {
-        return Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
-    }
 
-    private fun longToLocalDateTime(seconds: Long, nanos: Long): LocalDateTime {
-        return Instant.fromEpochSeconds(epochSeconds = seconds, nanosecondAdjustment = nanos)
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-    }
-
-    private fun parseLocalDateTime(value: String): LocalDateTime {
-        return try {
-            // Try with fractions first
-            val fractionLength = value.substringAfterLast('.', "").length
-            // Formatter must be non-lazy due to concurrency safety
-            createLocalDateTimeFormatter(fractionLength).parse(value)
-        } catch (_: IllegalArgumentException) {
-            // Fallback to ISO parsing
-            LocalDateTime.parse(value)
-        }
-    }
 
     override fun notNullValueToDB(value: T & Any): Any {
         val localDateTime = toLocalDateTime(value)
@@ -128,13 +92,13 @@ abstract class LocalDateTimeColumnType<T> : ColumnType<T>(), IDateColumnType {
             currentDialect is SQLiteDialect -> {
                 SQLITE_ORACLE_DATETIME_FORMAT.format(localDateTime)
             }
-            else -> localDateTime.toSqlTimestamp()
+            else -> localDateTime
         }
     }
 
     override fun readObject(rs: RowApi, index: Int): Any? {
         return if (currentDialect is OracleDialect) {
-            rs.getObject(index, java.sql.Timestamp::class.java)
+            rs.getObject(index, Instant::class)
         } else {
             super.readObject(rs, index)
         }
@@ -171,10 +135,25 @@ internal fun createLocalDateTimeFormatter(fraction: Int = 0) = LocalDateTime.For
         secondFraction(fraction)
     }
 }
+internal expect fun localDateTimeValueFromDB(value: Any): LocalDateTime?
 
-internal fun LocalDateTime.toSqlTimestamp(
-    timeZone: TimeZone = TimeZone.currentSystemDefault()
-) = toInstant(timeZone).let {
-    java.sql.Timestamp(it.toEpochMilliseconds())
-        .apply { this.nanos = it.nanosecondsOfSecond }
+internal fun longToLocalDateTime(millis: Long): LocalDateTime {
+    return Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
+}
+
+internal fun longToLocalDateTime(seconds: Long, nanos: Long): LocalDateTime {
+    return Instant.fromEpochSeconds(epochSeconds = seconds, nanosecondAdjustment = nanos)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+}
+
+internal fun parseLocalDateTime(value: String): LocalDateTime {
+    return try {
+        // Try with fractions first
+        val fractionLength = value.substringAfterLast('.', "").length
+        // Formatter must be non-lazy due to concurrency safety
+        createLocalDateTimeFormatter(fractionLength).parse(value)
+    } catch (_: IllegalArgumentException) {
+        // Fallback to ISO parsing
+        LocalDateTime.parse(value)
+    }
 }
